@@ -3,5 +3,5 @@ mod position;
 
 fn main() {
     println!("{}", chess_data::BLACK_PAWN_UNICODE);
-    let n: Position = (1);
+    println!("{}", position::get_bitboard_string(12345));
 }

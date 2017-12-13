@@ -1,0 +1,7 @@
+
+PERFT READY
+-in out
+-zobrist hashing
+-move generator
+-make move undomove
+-perft

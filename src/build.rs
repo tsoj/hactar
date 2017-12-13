@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::fs::File;
 use std::io::Write;
 mod chess_data;
@@ -29,7 +31,7 @@ fn write_64_array_to_string(a: &[u64; 64]) -> String
     let mut data = String::from("[");
     for i in 0..64
     {
-        data.push_str(&((1 as u64) << i).to_string());
+        data.push_str(&(a[i]).to_string());
         if i == 63
         {
             data.push_str("]");
@@ -47,7 +49,7 @@ fn write_8_array_to_string(a: &[u64; 8]) -> String
     let mut data = String::from("[");
     for i in 0..8
     {
-        data.push_str(&((1 as u64) << i).to_string());
+        data.push_str(&(a[i]).to_string());
         if i == 7
         {
             data.push_str("]");
@@ -592,7 +594,7 @@ fn print_bitboard(bitboard: u64, bit_at_index: &[u64; 64])
   {
 
     temp[i] = format!("{}", chess_data::ZERO_UNICODE);
-    if((bitboard & bit_at_index[i]) != 0)
+    if (bitboard & bit_at_index[i]) != 0
     {
         temp[i] = format!("{}", chess_data::ONE_UNICODE);
     }
