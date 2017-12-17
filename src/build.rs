@@ -81,30 +81,7 @@ fn write_64_64_array_to_string(a: &[[u64; 64]; 64]) -> String
     data
 }
 
-
 fn main() {
-    /*let mut data = String::from("[");
-    let mut i = 0;
-    let lsb: u64 = 1;
-    while i < 64
-    {
-        data.push_str(&(lsb << i).to_string());
-        if i == 63
-        {
-            data.push_str("];");
-        }
-        else
-        {
-            data.push(',');
-        }
-        i += 1;
-    }
-    let mut f = File::create("./src/chess_data_in/ranks.in").expect("Unable to create file");
-    f.write_all(data.as_bytes()).expect("Unable to write data");
-*/
-
-
-
     let mut bit_at_index: [u64; 64] = [0; 64];
     for i in 0..bit_at_index.len()
     {
@@ -156,8 +133,6 @@ fn main() {
             }
         }
     }
-    write_string_to_file("./src/chess_data_in/diagonals_64.in", &write_64_array_to_string(&diagonals_64));
-
     for i in 1..8
     {
         let current_diagonal: u64 = (MAIN_DIAGONAL >> i) & LOWER_RIGHT_SIDE_ZERO;
@@ -173,6 +148,8 @@ fn main() {
             }
         }
     }
+    write_string_to_file("./src/chess_data_in/diagonals_64.in", &write_64_array_to_string(&diagonals_64));
+
 
     let mut anti_diagonals_64: [u64; 64] = [0; 64];
     for i in 1..8
@@ -557,6 +534,7 @@ fn main() {
     }
     write_string_to_file("./src/chess_data_in/king_attack_table.in", &write_64_array_to_string(&king_attack_table));
 
+
     //panic!();
 }
 
@@ -586,7 +564,6 @@ fn print64_fields_to_chessboard(field_content: &Vec<String>)
   	println!("  A   B   C   D   E   F   G   H");
 }
 
-
 fn print_bitboard(bitboard: u64, bit_at_index: &[u64; 64])
 {
   let mut temp: Vec<String> = vec![String::new(); 64];
@@ -606,7 +583,6 @@ fn rank_to_file(rank: u64, files: &[u64; 8]) -> u64
 {
     (((rank & 0b11111111).wrapping_mul(MAIN_DIAGONAL)) & files[7]) >> 7
 }
-
 
 fn get_hashkey_rank(index: usize, occupancy: u64) -> usize
 {

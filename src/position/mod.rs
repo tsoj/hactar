@@ -18,7 +18,7 @@ pub struct Move
 pub struct Position
 {
     pub pieces: [u64; 6], //[Pawns, Knights, Bishops, Rooks, Queens, Kings]
-    pub player: [u64; 2], //[White pieces, Black pieces]
+    pub players: [u64; 2], //[White pieces, Black pieces]
     pub whose_move: player::Player,
     pub last_move: Move,
     pub halfmoves_played: u32
@@ -80,7 +80,7 @@ impl Position
         for  i in 0..chess_data::BIT_AT_INDEX.len()
         {
             temp[i] = " ".to_string();
-            if (self.player[player::BLACK] & chess_data::BIT_AT_INDEX[i]) != 0
+            if (self.players[player::BLACK] & chess_data::BIT_AT_INDEX[i]) != 0
             {
                 if (self.pieces[piecetype::PAWN] & chess_data::BIT_AT_INDEX[i]) != 0
                 {
@@ -107,7 +107,7 @@ impl Position
                     temp[i] = chess_data::BLACK_KING_UNICODE.to_string();
                 }
             }
-            else if (self.player[player::WHITE] & chess_data::BIT_AT_INDEX[i]) != 0
+            else if (self.players[player::WHITE] & chess_data::BIT_AT_INDEX[i]) != 0
             {
                 if (self.pieces[piecetype::PAWN] & chess_data::BIT_AT_INDEX[i]) != 0
                 {

@@ -17,7 +17,6 @@ pub const WHITE_ROOK_UNICODE: &'static str = "\u{265C}";
 pub const WHITE_QUEEN_UNICODE: &'static str = "\u{265B}";
 pub const WHITE_KING_UNICODE: &'static str = "\u{265A}";
 
-
 pub const NORTH: isize = 8;
 pub const SOUTH: isize = -8;
 pub const EAST: isize = 1;
@@ -44,26 +43,25 @@ const ANTI_DIAGONAL_ATTACK_TABLE: [[u64; 64]; 64] = include!("./chess_data_in/an
 const KNIGHT_ATTACK_TABLE: [u64; 64] = include!("./chess_data_in/knight_attack_table.in");
 const KING_ATTACK_TABLE: [u64; 64] = include!("./chess_data_in/king_attack_table.in");
 
+const ZOBRIST_RANDOM_BITMASKS_PIECES: [[u64; 64]; 6] = include!("./chess_data_in/zobrist_random_bitmasks_pieces.in");
+const ZOBRIST_RANDOM_BITMASKS_PLAYERS: [[u64; 64]; 2] = include!("./chess_data_in/zobrist_random_bitmasks_players.in");
+
 fn get_hashkey_rank(index: usize, occupancy: u64) -> usize
 {
     (((occupancy >> ((index / 8)*8)) >> 1) & 0b111111) as usize
 }
-
 fn get_hashkey_file(index: usize , occupancy: u64) -> usize
 {
     ((((((occupancy >> (index % 8)) & FILES[0] ).wrapping_mul(MAIN_DIAGONAL)) >> 56) >> 1) & 0b111111) as usize
 }
-
 fn get_hashkey_diagonal(index: usize, occupancy: u64) -> usize
 {
     (((((occupancy & DIAGONALS_64[index as usize]).wrapping_mul(FILES[0])) >> 56) >> 1) & 0b111111) as usize
 }
-
 fn get_hashkey_anti_diagonal(index: usize, occupancy: u64) -> usize
 {
     (((((occupancy & ANTI_DIAGONALS_64[index]).wrapping_mul(FILES[0])) >> 56) >> 1) & 0b111111) as usize
 }
-
 fn get_attack_mask_knight(index: usize) -> u64
 {
     KNIGHT_ATTACK_TABLE[index]
