@@ -4,77 +4,6 @@ use chess_data;
 pub mod piecetype;
 pub mod player;
 
-pub struct Move
-{
-    pub from: usize,
-    pub to: usize,
-    pub moved: piecetype::Piecetype,
-    pub captured: piecetype::Piecetype,
-    pub promoted: piecetype::Piecetype,
-    pub en_passant_castling: u64,
-    pub zobrist_key: u64,
-}
-
-impl Move
-{
-    pub fn clone_from(&mut self, p: &Move)
-    {
-        self.from = p.from;
-        self.to = p.to;
-        self.moved = p.moved;
-        self.captured = p.captured;
-        self.promoted = p.promoted;
-        self.en_passant_castling = p.en_passant_castling;
-        self.zobrist_key = p.zobrist_key;
-    }
-    pub fn empty_move() -> Move
-    {
-        Move
-        {
-            from: 0,
-            to: 0,
-            moved: piecetype::NO_PIECE,
-            captured: piecetype::NO_PIECE,
-            promoted: piecetype::NO_PIECE,
-            en_passant_castling: 0,
-            zobrist_key: 0,
-        }
-    }
-
-    pub fn get_data_string(&self) -> String
-    {
-        let mut ret = "".to_string();
-        ret += "\nMove:\n{";
-        ret += "\n\tFROM: ";
-        ret += &self.from.to_string()[..];
-        ret += "\n\tTO: ";
-        ret += &self.to.to_string()[..];
-        ret += "\n\tMOVED: ";
-        ret += &self.moved.to_string()[..];
-        ret += "\n\tCAPTURED: ";
-        ret += &self.captured.to_string()[..];
-        ret += "\n\tPROMOTED: ";
-        ret += &self.promoted.to_string()[..];
-        ret += "\n\tZOBRIST KEY: ";
-        ret += &self.zobrist_key.to_string()[..];
-        ret += "\n\tMOVE: CASTLING / EN PASSANT:\n";
-        ret += &get_bitboard_string(self.en_passant_castling)[..];
-        ret += "\n}\n";
-        ret
-    }
-}
-
-pub struct Position
-{
-    pub pieces: [u64; 6], //[Pawns, Knights, Bishops, Rooks, Queens, Kings]
-    pub players: [u64; 2], //[White pieces, Black pieces]
-    pub en_passant_castling: u64,
-    pub whose_move: player::Player,
-    pub last_move: Move,
-    pub fullmoves_played: u32,
-    pub halfmove_clock: u32
-}
-
 fn format_for_chess_board(field_content: &Vec<String>)->String
 {
     let mut s = "".to_string();
@@ -106,7 +35,6 @@ fn format_for_chess_board(field_content: &Vec<String>)->String
     s.push_str("  A   B   C   D   E   F   G   H\n");
     s
 }
-
 pub fn get_bitboard_string(bitboard: u64) -> String
 {
   let mut temp: Vec<String> = vec![String::new(); 64];
@@ -122,6 +50,77 @@ pub fn get_bitboard_string(bitboard: u64) -> String
   format_for_chess_board(&temp)
 }
 
+pub struct Move
+{
+    pub from: usize,
+    pub to: usize,
+    pub moved: piecetype::Piecetype,
+    pub captured: piecetype::Piecetype,
+    pub promoted: piecetype::Piecetype,
+    pub en_passant_castling: u64,
+    pub zobrist_key: u64,
+}
+impl Move
+{
+    pub fn clone_from(&mut self, p: &Move)
+    {
+        self.from = p.from;
+        self.to = p.to;
+        self.moved = p.moved;
+        self.captured = p.captured;
+        self.promoted = p.promoted;
+        self.en_passant_castling = p.en_passant_castling;
+        self.zobrist_key = p.zobrist_key;
+    }
+    pub fn empty_move() -> Move
+    {
+        Move
+        {
+            from: 0,
+            to: 0,
+            moved: piecetype::NO_PIECE,
+            captured: piecetype::NO_PIECE,
+            promoted: piecetype::NO_PIECE,
+            en_passant_castling: 0,
+            zobrist_key: 0,
+        }
+    }
+
+    pub fn get_data_string(&self) -> String
+    {
+        let mut ret = "".to_string();
+        ret += "\nMove:\n";
+        ret += "--------------------------------------------------\n";
+        ret += "\n\tFROM: ";
+        ret += &self.from.to_string()[..];
+        ret += "\n\tTO: ";
+        ret += &self.to.to_string()[..];
+        ret += "\n\tMOVED: ";
+        ret += &self.moved.to_string()[..];
+        ret += "\n\tCAPTURED: ";
+        ret += &self.captured.to_string()[..];
+        ret += "\n\tPROMOTED: ";
+        ret += &self.promoted.to_string()[..];
+        ret += "\n\tZOBRIST KEY: ";
+        ret += &format!("{:x}",self.zobrist_key)[..];
+        ret += "\n\tMOVE: CASTLING / EN PASSANT:\n";
+        ret += &get_bitboard_string(self.en_passant_castling)[..];
+        ret += "--------------------------------------------------\n";
+        ret
+    }
+}
+
+pub struct Position
+{
+    pub pieces: [u64; 6], //[Pawns, Knights, Bishops, Rooks, Queens, Kings]
+    pub players: [u64; 2], //[White pieces, Black pieces]
+    pub en_passant_castling: u64,
+    pub zobrist_key: u64,
+    pub whose_move: player::Player,
+    pub last_move: Move,
+    pub fullmoves_played: u32,
+    pub halfmove_clock: u32
+}
 impl Position
 {
     pub fn empty_position() -> Position
@@ -132,6 +131,7 @@ impl Position
             pieces: [0,0,0,0,0,0],
             players: [0,0],
             en_passant_castling: 0,
+            zobrist_key: 0,
             whose_move: player::NO_PLAYER,
             last_move:
             Move::empty_move(),
@@ -139,18 +139,17 @@ impl Position
             halfmove_clock: 0
         }
     }
-
     pub fn clone_from(&mut self, p: &Position)
     {
         self.pieces.clone_from(&p.pieces);
         self.players.clone_from(&p.players);
         self.en_passant_castling = p.en_passant_castling;
+        self.zobrist_key = p.zobrist_key;
         self.whose_move = p.whose_move;
         self.last_move.clone_from(&p.last_move);
         self.fullmoves_played = p.fullmoves_played;
         self.halfmove_clock = p.halfmove_clock;
     }
-
     pub fn add_piece(&mut self, player: player::Player, piece: piecetype::Piecetype , field: usize)
     {
         self.pieces[piece] |=  chess_data::BIT_AT_INDEX[field];
@@ -166,7 +165,6 @@ impl Position
         self.remove_piece(player, piece, from);
         self.add_piece(player, piece, to);
     }
-
     pub fn get_chess_board_string(&self) -> String
     {
         let mut temp: Vec<String> = vec![String::new(); 64];
@@ -242,7 +240,6 @@ impl Position
         }
         s
     }
-
     pub fn get_data_string(&self) -> String
     {
         let mut ret = "".to_string();
@@ -252,6 +249,8 @@ impl Position
         ret += &self.fullmoves_played.to_string()[..];
         ret += "\nHALFMOVE CLOCK: ";
         ret += &self.halfmove_clock.to_string()[..];
+        ret += "\nZOBRIST KEY: ";
+        ret += &format!("{:x}", self.zobrist_key)[..];
         ret += &self.last_move.get_data_string()[..];
         ret += "CASTLING / EN PASSANT\n";
         ret += &get_bitboard_string(self.en_passant_castling)[..];
@@ -273,7 +272,6 @@ impl Position
         ret += &get_bitboard_string(self.pieces[piecetype::KING])[..];
         ret
     }
-
     pub fn set_from_fen(&mut self, fen: &String) -> bool
     {
         let mut p = Position::empty_position();
@@ -408,7 +406,68 @@ impl Position
         }
         p.halfmove_clock = halfmove_clock.parse::<u32>().unwrap();
         p.fullmoves_played = fullmove_number.parse::<u32>().unwrap();
+        p.zobrist_key = p.calculate_zobristkey();
         self.clone_from(&p);
         true
+    }
+    pub fn calculate_zobristkey(&self) -> u64
+    {
+        let mut ret: u64 = 0;
+        for i in 0..piecetype::NO_PIECE
+        {
+            if self.pieces[i] != 0
+            {
+                let mut temp_occupancy = self.pieces[i];
+                loop
+                {
+                    let field_index = temp_occupancy.trailing_zeros() as usize;
+                    if (chess_data::BIT_AT_INDEX[field_index] & self.players[player::WHITE])!=0
+                    {
+                        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[player::WHITE][field_index];
+                    }
+                    else
+                    {
+                        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[player::BLACK][field_index];
+                    }
+                    ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[i][field_index];
+                    temp_occupancy &= !chess_data::BIT_AT_INDEX[field_index];
+                    if temp_occupancy == 0
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        ret ^= self.en_passant_castling;
+        ret ^= self.whose_move as u64;
+        ret
+    }
+    pub fn update_zobristkey(&self, m: &Move) -> u64
+    {
+        let mut ret: u64 = self.zobrist_key;
+
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.from];
+        if m.promoted != piecetype::NO_PIECE
+        {
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.promoted][m.to];
+        }
+        else
+        {
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.to];
+        }
+
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.whose_move][m.from];
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.whose_move][m.to];
+        if m.captured != piecetype::NO_PIECE
+        {
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[player::switch_player(self.whose_move)][m.to];
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[player::switch_player(self.whose_move)][m.to];
+        }
+
+        ret ^= self.en_passant_castling;
+        ret ^= self.whose_move as u64;
+        ret ^= m.en_passant_castling;
+        ret ^= player::switch_player(self.whose_move) as u64;
+        ret
     }
 }
