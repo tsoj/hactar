@@ -1,4 +1,4 @@
-[root]
+[[package]]
 name = "hactar"
 version = "0.1.0"
 

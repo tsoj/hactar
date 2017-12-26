@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use chess_data;
+use std::ops::{Index,IndexMut};
 pub mod piecetype;
 pub mod player;
 
@@ -50,6 +51,13 @@ pub fn get_bitboard_string(bitboard: u64) -> String
   format_for_chess_board(&temp)
 }
 
+fn find_and_clear_trailing_one(mask: &mut u64) -> usize
+{
+    let ret = mask.trailing_zeros() as usize;
+    *mask &= (*mask) -1;
+    ret
+}
+
 pub struct Move
 {
     pub from: usize,
@@ -85,7 +93,6 @@ impl Move
             zobrist_key: 0,
         }
     }
-
     pub fn get_data_string(&self) -> String
     {
         let mut ret = "".to_string();
@@ -107,6 +114,122 @@ impl Move
         ret += &get_bitboard_string(self.en_passant_castling)[..];
         ret += "--------------------------------------------------\n";
         ret
+    }
+}
+
+const MOVE_LIST_MAXIMUM_LENGTH: usize = 128;
+pub struct MoveList
+{
+    pub len: usize,
+    a: [Move; MOVE_LIST_MAXIMUM_LENGTH]
+}
+impl Index<usize> for MoveList {
+    type Output = Move;
+    fn index<'a>(&'a self, index: usize) -> &'a  Move {
+        &self.a[index]
+    }
+}
+impl IndexMut<usize> for MoveList {
+    fn index_mut<'a>(&'a mut self, index: usize) -> &'a mut Move {
+        &mut self.a[index]
+    }
+}
+impl MoveList
+{
+    pub fn get_empty_move_list() -> MoveList
+    {
+        MoveList{len: 0, a: unsafe{::std::mem::uninitialized()}}
+    }
+
+    pub fn generate_pawn_moves(&mut self, orig_position: &Position, us: player::Player, enemy: player::Player)
+    {
+
+    }
+    pub fn generate_castling_moves(&mut self, orig_position: &Position, us: player::Player, enemy: player::Player)
+    {
+
+    }
+    pub fn generate_piece_moves<F>(&mut self, orig_position: &Position, us: player::Player, enemy: player::Player, piece: piecetype::Piecetype, mut get_attack_mask: F)
+    where F: FnMut(usize, u64) -> u64
+    {
+        let mut piece_occupancy = orig_position.pieces[piece] & orig_position.players[us];
+        if piece_occupancy != 0
+        {
+            loop
+            {
+                let from = find_and_clear_trailing_one(&mut piece_occupancy);
+
+                let occupancy = orig_position.players[player::WHITE] | orig_position.players[player::BLACK];
+                let mut quiet_attack_mask = get_attack_mask(from, occupancy);
+                let mut capture_attack_mask = quiet_attack_mask & orig_position.players[enemy];
+                quiet_attack_mask &= !capture_attack_mask;
+                quiet_attack_mask &= !orig_position.players[us];
+                if quiet_attack_mask != 0
+                {
+                    loop
+                    {
+                        let to = find_and_clear_trailing_one(&mut quiet_attack_mask);
+
+                        let move_list_length = self.len;
+                        self[move_list_length] = Move
+                        {
+                            from: from,
+                            to: to,
+                            moved: piece,
+                            captured: piecetype::NO_PIECE,
+                            promoted: piecetype::NO_PIECE,
+                            en_passant_castling: orig_position.en_passant_castling,
+                            zobrist_key: 0,
+                        };
+                        self.len+=1;
+
+                        if quiet_attack_mask == 0
+                        {
+                            break;
+                        }
+                    }
+                }
+                if capture_attack_mask != 0
+                {
+                    loop
+                    {
+                        let to = find_and_clear_trailing_one(&mut capture_attack_mask);
+
+                        let move_list_length = self.len;
+                        self[move_list_length] = Move
+                        {
+                            from: from,
+                            to: to,
+                            moved: piece,
+                            captured: piecetype::NO_PIECE,
+                            promoted: piecetype::NO_PIECE,
+                            en_passant_castling: orig_position.en_passant_castling,
+                            zobrist_key: 0,
+                        };
+                        for i in 0..piecetype::NO_PIECE
+                        {
+                            if (orig_position.pieces[i] & chess_data::BIT_AT_INDEX[to]) != 0
+                            {
+                                self[move_list_length].captured = i as piecetype::Piecetype;
+                                break;
+                            }
+                        }
+                        self.len+=1;
+
+                        if capture_attack_mask == 0
+                        {
+                            break;
+                        }
+                    }
+                }
+                if piece_occupancy == 0
+                {
+                    break;
+                }
+
+            }
+        }
+
     }
 }
 
@@ -468,6 +591,29 @@ impl Position
         ret ^= self.whose_move as u64;
         ret ^= m.en_passant_castling;
         ret ^= player::switch_player(self.whose_move) as u64;
+
+        if (m.en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5])) != (self.en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5]))
+        {
+            //TODO: en passant...
+        }
+
+        if (m.en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7])) != (self.en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7]))
+        {
+            //TODO: castling...
+        }
+
         ret
+    }
+    pub fn generate_move_list(&self, us: player::Player, enemy: player::Player) -> MoveList
+    {
+        let mut move_list = MoveList::get_empty_move_list();
+        move_list.generate_pawn_moves(&self, us, enemy);
+        move_list.generate_castling_moves(&self, us, enemy);
+        move_list.generate_piece_moves(&self, us, enemy, piecetype::KNIGTH, chess_data::get_attack_mask_knight);
+        move_list.generate_piece_moves(&self, us, enemy, piecetype::BISHOP, chess_data::get_attack_mask_bishop);
+        move_list.generate_piece_moves(&self, us, enemy, piecetype::ROOK, chess_data::get_attack_mask_rook);
+        move_list.generate_piece_moves(&self, us, enemy, piecetype::QUEEN, chess_data::get_attack_mask_queen);
+        move_list.generate_piece_moves(&self, us, enemy, piecetype::KING, chess_data::get_attack_mask_king);
+        move_list
     }
 }

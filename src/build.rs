@@ -268,10 +268,11 @@ fn main() {
                 }
             }
             anti_diagonal_attack_table[index][get_hashkey_anti_diagonal(index, occupancy,&files, &anti_diagonals_64)] = temp_attackmask;
-            /*if(index == 35 && possible_ranks_index == 20)
+            /*if(index == 2 && possible_ranks_index == 20)
             {
                 print_bitboard(possible_ranks[possible_ranks_index], &bit_at_index);
                 print_bitboard(temp_attackmask, &bit_at_index);
+                panic!();
             }*/
         }
     }
@@ -329,7 +330,7 @@ fn main() {
                 }
             }
             diagonal_attack_table[index][get_hashkey_diagonal(index, occupancy, &files, &diagonals_64)] = temp_attackmask;
-            /*if(index == 35 && possible_ranks_index == 20)
+            /*if(index == 22 && possible_ranks_index == 20)
             {
                 print_bitboard(possible_ranks[possible_ranks_index], &bit_at_index);
                 print_bitboard(temp_attackmask, &bit_at_index);
@@ -596,7 +597,8 @@ fn get_hashkey_file(index: usize , occupancy: u64, files: &[u64; 8]) -> usize
 
 fn get_hashkey_diagonal(index: usize, occupancy: u64, files: &[u64; 8], diagonals_64: &[u64; 64]) -> usize
 {
-    (((((occupancy & diagonals_64[index as usize]).wrapping_mul(files[0])) >> 56) >> 1) & 0b111111) as usize
+    (((((occupancy & diagonals_64[index]).wrapping_mul(files[0])) >> 56) >> 1) & 0b111111) as usize
+    //return ((((occupancy & diagonals64[fieldIndex])* files[0]) >> 56) >> 1) & 0b111111;
 }
 
 fn get_hashkey_anti_diagonal(index: usize, occupancy: u64, files: &[u64; 8], anti_diagonals_64: &[u64; 64]) -> usize

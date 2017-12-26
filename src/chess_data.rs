@@ -75,7 +75,7 @@ fn get_hashkey_anti_diagonal(index: usize, occupancy: u64) -> usize
 {
     (((((occupancy & ANTI_DIAGONALS_64[index]).wrapping_mul(FILES[0])) >> 56) >> 1) & 0b111111) as usize
 }
-pub fn get_attack_mask_knight(index: usize) -> u64
+pub fn get_attack_mask_knight(index: usize, _occupancy: u64) -> u64
 {
     KNIGHT_ATTACK_TABLE[index]
 }
@@ -96,7 +96,7 @@ pub fn get_attack_mask_queen(index: usize, occupancy: u64) -> u64
     RANK_ATTACK_TABLE[index][get_hashkey_rank(index, occupancy)] |
     FILE_ATTACK_TABLE[index][get_hashkey_file(index, occupancy)]
 }
-pub fn get_attack_mask_king(index: usize) -> u64
+pub fn get_attack_mask_king(index: usize, _occupancy: u64) -> u64
 {
     KING_ATTACK_TABLE[index]
 }
