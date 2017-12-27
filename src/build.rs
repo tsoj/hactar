@@ -25,13 +25,13 @@ fn write_string_to_file(path: &str, s: &String)
     let mut f = File::create(path).expect("Unable to create file");
     f.write_all(s.as_bytes()).expect("Unable to write data");
 }
-
 fn write_64_array_to_string(a: &[u64; 64]) -> String
 {
     let mut data = String::from("[");
     for i in 0..64
     {
         data.push_str(&(a[i]).to_string());
+        data.push_str("u64");
         if i == 63
         {
             data.push_str("]");
@@ -43,13 +43,13 @@ fn write_64_array_to_string(a: &[u64; 64]) -> String
     }
     data
 }
-
 fn write_8_array_to_string(a: &[u64; 8]) -> String
 {
     let mut data = String::from("[");
     for i in 0..8
     {
         data.push_str(&(a[i]).to_string());
+        data.push_str("u64");
         if i == 7
         {
             data.push_str("]");
@@ -61,7 +61,6 @@ fn write_8_array_to_string(a: &[u64; 8]) -> String
     }
     data
 }
-
 fn write_64_64_array_to_string(a: &[[u64; 64]; 64]) -> String
 {
 
@@ -70,6 +69,41 @@ fn write_64_64_array_to_string(a: &[[u64; 64]; 64]) -> String
     {
         data.push_str(&write_64_array_to_string(&a[i]));
         if i == 63
+        {
+            data.push_str("]");
+        }
+        else
+        {
+            data.push(',');
+        }
+    }
+    data
+}
+fn write_2_64_array_to_string(a: &[[u64; 64]; 2]) -> String
+{
+
+    let mut data = String::from("[");
+    for i in 0..2
+    {
+        data.push_str(&write_64_array_to_string(&a[i]));
+        if i == 1
+        {
+            data.push_str("]");
+        }
+        else
+        {
+            data.push(',');
+        }
+    }
+    data
+}
+fn write_2_64_64_array_to_string(a: &[[[u64; 64]; 64]; 2]) -> String
+{
+    let mut data = String::from("[");
+    for i in 0..2
+    {
+        data.push_str(&write_64_64_array_to_string(&a[i]));
+        if i == 1
         {
             data.push_str("]");
         }
@@ -535,7 +569,50 @@ fn main() {
     }
     write_string_to_file("./src/chess_data_in/king_attack_table.in", &write_64_array_to_string(&king_attack_table));
 
-
+    let mut pawn_capture_attack_table: [[u64; 64]; 2] = [[0; 64]; 2];
+    for i in 0..64
+    {
+        //white
+        if i + NORTH < 64
+        {
+            if i%8!=0
+            {
+                pawn_capture_attack_table[0][i as usize] |= bit_at_index[(i +NORTH_WEST)as usize];
+            }
+            if i%8!=7
+            {
+                pawn_capture_attack_table[0][i as usize] |= bit_at_index[(i +NORTH_EAST)as usize];
+            }
+        }
+        //black
+        if i + SOUTH >= 0
+        {
+            if i%8!=0
+            {
+                pawn_capture_attack_table[1][i as usize] |= bit_at_index[(i +SOUTH_WEST)as usize];
+            }
+            if i%8!=7
+            {
+                pawn_capture_attack_table[1][i as usize] |= bit_at_index[(i +SOUTH_EAST)as usize];
+            }
+        }
+    }
+    write_string_to_file("./src/chess_data_in/pawn_capture_attack_table.in", &write_2_64_array_to_string(&pawn_capture_attack_table));
+    let mut pawn_quiet_attack_table: [[u64; 64]; 2] = [[0; 64]; 2];
+    for i in 0..64
+    {
+        //white
+        if i + NORTH < 64
+        {
+            pawn_quiet_attack_table[0][i as usize] |= bit_at_index[(i +NORTH)as usize];
+        }
+        //black
+        if i + SOUTH >= 0
+        {
+            pawn_quiet_attack_table[1][i as usize] |= bit_at_index[(i +SOUTH)as usize];
+        }
+    }
+    write_string_to_file("./src/chess_data_in/pawn_quiet_attack_table.in", &write_2_64_array_to_string(&pawn_quiet_attack_table));
     //panic!();
 }
 
