@@ -689,7 +689,7 @@ impl Position
         ret ^= self.whose_move as u64;
         ret
     }
-    pub fn update_zobristkey(&self, m: &Move) -> u64
+    pub fn get_updated_zobristkey(&self, m: &Move, en_passant_castling: u64, us: player::Player, enemy: player::Player) -> u64
     {
         let mut ret: u64 = self.zobrist_key;
 
@@ -703,34 +703,109 @@ impl Position
             ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.to];
         }
 
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.whose_move][m.from];
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.whose_move][m.to];
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][m.from];
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][m.to];
         if m.captured != piecetype::NO_PIECE
         {
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[player::switch_player(self.whose_move)][m.to];
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[player::switch_player(self.whose_move)][m.to];
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.captured][m.to];
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][m.to];
         }
 
-        ret ^= self.en_passant_castling;
-        ret ^= self.whose_move as u64;
+        ret ^= en_passant_castling;
         ret ^= m.en_passant_castling;
-        ret ^= player::switch_player(self.whose_move) as u64;
+        ret ^= us as u64;
+        ret ^= enemy as u64;
 
-        if (m.en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5])) != (self.en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5]))
+        if (m.en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5])) != (en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5]))
         {
             //TODO: en passant...
+            let captured_index = chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to].trailing_zeros() as usize;
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::PAWN][captured_index];
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][captured_index];
+
         }
 
-        if (m.en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7])) != (self.en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7]))
+        if (m.en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7])) != (en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7]))
         {
             //TODO: castling...
+            //IF QUEENSIDE
+            if m.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] == 0
+            {
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[us]];
+            }
+            //IF KINGSIDE
+            else
+            {
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
+            }
         }
 
         ret
     }
-    pub fn rollback_zobristkey(&self, m: &Move, backup_en_passant_castling: u64) -> u64
+    pub fn update_zobristkey(&mut self, m: &Move, en_passant_castling: u64, us: player::Player, enemy: player::Player)
     {
-        0
+        let mut ret: u64 = self.zobrist_key;
+
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.from];
+        if m.promoted != piecetype::NO_PIECE
+        {
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.promoted][m.to];
+        }
+        else
+        {
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.to];
+        }
+
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][m.from];
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][m.to];
+        if m.captured != piecetype::NO_PIECE
+        {
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.captured][m.to];
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][m.to];
+        }
+
+        ret ^= en_passant_castling;
+        ret ^= m.en_passant_castling;
+        ret ^= us as u64;
+        ret ^= enemy as u64;
+
+        if (m.en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5])) != (en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5]))
+        {
+            //TODO: en passant...
+            let captured_index = chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to].trailing_zeros() as usize;
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::PAWN][captured_index];
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][captured_index];
+
+        }
+
+        if (m.en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7])) != (en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7]))
+        {
+            //TODO: castling...
+            //IF QUEENSIDE
+            if m.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] == 0
+            {
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[us]];
+            }
+            //IF KINGSIDE
+            else
+            {
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
+            }
+        }
+
+        self.zobrist_key = ret;
     }
     pub fn generate_move_list(&mut self, us: player::Player, enemy: player::Player) -> MoveList
     {
@@ -787,23 +862,23 @@ impl Position
         let kings_index = (self.pieces[piecetype::KING] & self.players[enemy]).trailing_zeros() as usize;
         self.is_check(us, enemy, kings_index)
     }
-    pub fn make_move(&mut self, a_move: &Move, us: player::Player, enemy: player::Player) -> u64
+    pub fn make_move(&mut self, m: &Move, us: player::Player, enemy: player::Player) -> u64
     {
         let backup_en_passant_castling = self.en_passant_castling;
-        self.en_passant_castling = a_move.en_passant_castling;
+        self.en_passant_castling = m.en_passant_castling;
         //en passant
         if (
-            chess_data::RANKS[2] | chess_data::RANKS[5]) & a_move.en_passant_castling != (chess_data::RANKS[2] | chess_data::RANKS[5]) & backup_en_passant_castling &&
-            a_move.captured == piecetype::PAWN
+            chess_data::RANKS[2] | chess_data::RANKS[5]) & m.en_passant_castling != (chess_data::RANKS[2] | chess_data::RANKS[5]) & backup_en_passant_castling &&
+            m.captured == piecetype::PAWN
         {
-            self.remove_piece(enemy, piecetype::PAWN, chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][a_move.to]);
-            self.move_piece(us, piecetype::PAWN, chess_data::BIT_AT_INDEX[a_move.from], chess_data::BIT_AT_INDEX[a_move.to]);
+            self.remove_piece(enemy, piecetype::PAWN, chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to]);
+            self.move_piece(us, piecetype::PAWN, chess_data::BIT_AT_INDEX[m.from], chess_data::BIT_AT_INDEX[m.to]);
         }
         //castling
-        else if (chess_data::RANKS[0] | chess_data::RANKS[7]) & a_move.en_passant_castling != (chess_data::RANKS[0] | chess_data::RANKS[7]) & backup_en_passant_castling
+        else if (chess_data::RANKS[0] | chess_data::RANKS[7]) & m.en_passant_castling != (chess_data::RANKS[0] | chess_data::RANKS[7]) & backup_en_passant_castling
         {
             //IF QUEENSIDE
-            if a_move.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] == 0
+            if m.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] == 0
             {
                 self.move_piece(us, piecetype::KING, chess_data::CASTLING_KING_FROM[us], chess_data::CASTLING_QUEENSIDE_KING_TO[us]);
                 self.move_piece(us, piecetype::ROOK, chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us], chess_data::CASTLING_QUEENSIDE_ROOK_TO[us]);
@@ -817,38 +892,39 @@ impl Position
         }
         else
         {
-            if a_move.captured != piecetype::NO_PIECE
+            if m.captured != piecetype::NO_PIECE
             {
-                self.remove_piece(enemy, a_move.captured, chess_data::BIT_AT_INDEX[a_move.to]);
+                self.remove_piece(enemy, m.captured, chess_data::BIT_AT_INDEX[m.to]);
             }
-            if a_move.promoted == piecetype::NO_PIECE
+            if m.promoted == piecetype::NO_PIECE
             {
-                self.move_piece(us, a_move.moved, chess_data::BIT_AT_INDEX[a_move.from], chess_data::BIT_AT_INDEX[a_move.to]);
+                self.move_piece(us, m.moved, chess_data::BIT_AT_INDEX[m.from], chess_data::BIT_AT_INDEX[m.to]);
             }
             else
             {
-                self.remove_piece(us, a_move.moved, chess_data::BIT_AT_INDEX[a_move.from]);
-                self.add_piece(us, a_move.promoted, chess_data::BIT_AT_INDEX[a_move.to]);
+                self.remove_piece(us, m.moved, chess_data::BIT_AT_INDEX[m.from]);
+                self.add_piece(us, m.promoted, chess_data::BIT_AT_INDEX[m.to]);
             }
         }
+        self.update_zobristkey(m, backup_en_passant_castling, us, enemy);
         backup_en_passant_castling
     }
-    pub fn undo_move(&mut self, a_move: &Move, backup_en_passant_castling: u64, us: player::Player, enemy: player::Player)
+    pub fn undo_move(&mut self, m: &Move, backup_en_passant_castling: u64, us: player::Player, enemy: player::Player)
     {
         self.en_passant_castling = backup_en_passant_castling;
         //en passant
         if (
-            chess_data::RANKS[2] | chess_data::RANKS[5]) & a_move.en_passant_castling != (chess_data::RANKS[2] | chess_data::RANKS[5]) & backup_en_passant_castling &&
-            a_move.captured == piecetype::PAWN
+            chess_data::RANKS[2] | chess_data::RANKS[5]) & m.en_passant_castling != (chess_data::RANKS[2] | chess_data::RANKS[5]) & backup_en_passant_castling &&
+            m.captured == piecetype::PAWN
         {
-            self.add_piece(enemy, piecetype::PAWN, chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][a_move.to]);
-            self.move_piece(us, piecetype::PAWN, chess_data::BIT_AT_INDEX[a_move.to], chess_data::BIT_AT_INDEX[a_move.from]);
+            self.add_piece(enemy, piecetype::PAWN, chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to]);
+            self.move_piece(us, piecetype::PAWN, chess_data::BIT_AT_INDEX[m.to], chess_data::BIT_AT_INDEX[m.from]);
         }
         //castling
-        else if (chess_data::RANKS[0] | chess_data::RANKS[7]) & a_move.en_passant_castling != (chess_data::RANKS[0] | chess_data::RANKS[7]) & backup_en_passant_castling
+        else if (chess_data::RANKS[0] | chess_data::RANKS[7]) & m.en_passant_castling != (chess_data::RANKS[0] | chess_data::RANKS[7]) & backup_en_passant_castling
         {
             //IF QUEENSIDE
-            if a_move.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] == 0
+            if m.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] == 0
             {
                 self.move_piece(us, piecetype::KING, chess_data::CASTLING_QUEENSIDE_KING_TO[us], chess_data::CASTLING_KING_FROM[us]);
                 self.move_piece(us, piecetype::ROOK, chess_data::CASTLING_QUEENSIDE_ROOK_TO[us], chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us]);
@@ -862,19 +938,20 @@ impl Position
         }
         else
         {
-            if a_move.promoted == piecetype::NO_PIECE
+            if m.promoted == piecetype::NO_PIECE
             {
-                self.move_piece(us, a_move.moved, chess_data::BIT_AT_INDEX[a_move.to], chess_data::BIT_AT_INDEX[a_move.from]);
+                self.move_piece(us, m.moved, chess_data::BIT_AT_INDEX[m.to], chess_data::BIT_AT_INDEX[m.from]);
             }
             else
             {
-                self.remove_piece(us, a_move.promoted, chess_data::BIT_AT_INDEX[a_move.to]);
-                self.add_piece(us, a_move.moved, chess_data::BIT_AT_INDEX[a_move.from]);
+                self.remove_piece(us, m.promoted, chess_data::BIT_AT_INDEX[m.to]);
+                self.add_piece(us, m.moved, chess_data::BIT_AT_INDEX[m.from]);
             }
-            if a_move.captured != piecetype::NO_PIECE
+            if m.captured != piecetype::NO_PIECE
             {
-                self.add_piece(enemy, a_move.captured, chess_data::BIT_AT_INDEX[a_move.to]);
+                self.add_piece(enemy, m.captured, chess_data::BIT_AT_INDEX[m.to]);
             }
         }
+        self.update_zobristkey(m, backup_en_passant_castling, us, enemy);
     }
 }
