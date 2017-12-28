@@ -5,3 +5,6 @@ authors = ["tsoj <tsoj.tsoj@gmx.de>"]
 build = "src/build.rs"
 
 [dependencies]
+
+[profile.dev]
+opt-level = 3

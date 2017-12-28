@@ -123,13 +123,15 @@ pub struct MoveList
     pub len: usize,
     a: [Move; MOVE_LIST_MAXIMUM_LENGTH]
 }
-impl Index<usize> for MoveList {
+impl Index<usize> for MoveList
+{
     type Output = Move;
     fn index<'a>(&'a self, index: usize) -> &'a  Move {
         &self.a[index]
     }
 }
-impl IndexMut<usize> for MoveList {
+impl IndexMut<usize> for MoveList
+{
     fn index_mut<'a>(&'a mut self, index: usize) -> &'a mut Move {
         &mut self.a[index]
     }
@@ -254,8 +256,7 @@ impl MoveList
             orig_position.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] != 0 &&
             chess_data::CASTLING_QUEENSIDE_BLOCK_RELEVANT_AREA[us] & occupancy == 0 &&
             !orig_position.is_check(us, enemy, chess_data::CASTLING_QUEENSIDE_CHECK_RELEVANT_FIELDS[us][0]) &&
-            !orig_position.is_check(us, enemy, chess_data::CASTLING_QUEENSIDE_CHECK_RELEVANT_FIELDS[us][1]) &&
-            !orig_position.is_check(us, enemy, chess_data::CASTLING_QUEENSIDE_CHECK_RELEVANT_FIELDS[us][2])
+            !orig_position.is_check(us, enemy, chess_data::CASTLING_QUEENSIDE_CHECK_RELEVANT_FIELDS[us][1])
             {
                 self.add_move(
                     chess_data::CASTLING_KING_FROM_INDEX[us],
@@ -271,8 +272,7 @@ impl MoveList
             orig_position.en_passant_castling & chess_data::CASTLING_KINGSIDE_ROOK_FROM[us] != 0 &&
             chess_data::CASTLING_KINGSIDE_BLOCK_RELEVANT_AREA[us] & occupancy == 0 &&
             !orig_position.is_check(us, enemy, chess_data::CASTLING_KINGSIDE_CHECK_RELEVANT_FIELDS[us][0]) &&
-            !orig_position.is_check(us, enemy, chess_data::CASTLING_KINGSIDE_CHECK_RELEVANT_FIELDS[us][1]) &&
-            !orig_position.is_check(us, enemy, chess_data::CASTLING_KINGSIDE_CHECK_RELEVANT_FIELDS[us][2])
+            !orig_position.is_check(us, enemy, chess_data::CASTLING_KINGSIDE_CHECK_RELEVANT_FIELDS[us][1])
             {
                 self.add_move(
                     chess_data::CASTLING_KING_FROM_INDEX[us],
@@ -777,16 +777,17 @@ impl Position
 
         if (m.en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5])) != (en_passant_castling & (chess_data::FILES[2] | chess_data::FILES[5]))
         {
-            //TODO: en passant...
             let captured_index = chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to].trailing_zeros() as usize;
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::PAWN][captured_index];
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][captured_index];
+            if captured_index != 64
+            {
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piecetype::PAWN][captured_index];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][captured_index];
+            }
 
         }
 
         if (m.en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7])) != (en_passant_castling & (chess_data::FILES[0] | chess_data::FILES[7]))
         {
-            //TODO: castling...
             //IF QUEENSIDE
             if m.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] == 0
             {
@@ -804,7 +805,7 @@ impl Position
                 ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
             }
         }
-
+        //TODO: consider promotion...
         self.zobrist_key = ret;
     }
     pub fn generate_move_list(&mut self, us: player::Player, enemy: player::Player) -> MoveList
@@ -859,7 +860,11 @@ impl Position
     }
     pub fn is_check_unkown_kings_index(&self, us: player::Player, enemy: player::Player) -> bool
     {
-        let kings_index = (self.pieces[piecetype::KING] & self.players[enemy]).trailing_zeros() as usize;
+        let kings_index = (self.pieces[piecetype::KING] & self.players[us]).trailing_zeros() as usize;
+        if kings_index == 64
+        {
+            return true;
+        }
         self.is_check(us, enemy, kings_index)
     }
     pub fn make_move(&mut self, m: &Move, us: player::Player, enemy: player::Player) -> u64
@@ -953,5 +958,22 @@ impl Position
             }
         }
         self.update_zobristkey(m, backup_en_passant_castling, us, enemy);
+    }
+    pub fn get_all_pseudo_legal_moves_string(&mut self) -> String
+    {
+        let mut ret = "".to_string();
+        let enemy = player::switch_player(self.whose_move);
+        let us = self.whose_move;
+        let ml = self.generate_move_list(us, enemy);
+        for i in 0..ml.len
+        {
+            let mut next_p = self.clone();
+            next_p.make_move(&ml[i], us, enemy);
+            ret += &next_p.get_chess_board_string()[..];
+            ret += "\n";
+        }
+        ret+= &ml.len.to_string()[..];
+        ret += " pseudo-legal moves.\n";
+        ret
     }
 }
