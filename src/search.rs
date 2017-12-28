@@ -1,5 +1,5 @@
 use position;
-pub type Score = u32;
+//pub type Score = u32;
 
 fn perft(depth: u32, position: &mut position::Position, us: position::player::Player, enemy: position::player::Player) -> u32
 {
@@ -12,14 +12,47 @@ fn perft(depth: u32, position: &mut position::Position, us: position::player::Pl
     let movelist = position.generate_move_list(us, enemy);
     for i in 0..movelist.len
     {
-        /*let mut position_n = position.clone();
-        position_n.make_move(&movelist[i], us, enemy);*/
+        let mut position_n = position.clone();
         let backup_en_passant_castling = position.make_move(&movelist[i], us, enemy);
         if !position.is_check_unkown_kings_index(us, enemy)
         {
             nodes += perft(depth - 1, position, enemy, us);
         }
         position.undo_move(&movelist[i], backup_en_passant_castling, us, enemy);
+
+        let mut t = false;
+
+        for i in 0..6
+        {
+            if position_n.pieces[i] != position.pieces[i]
+            {
+                t = true;
+                println!("1 {}", i);
+            }
+        }
+        for i in 0..2
+        {
+            if position_n.players[i] != position.players[i]
+            {
+                t = true;
+                println!("2 {}", i);
+            }
+        }
+        if position_n.en_passant_castling != position.en_passant_castling
+        {
+            t = true;
+            println!("en_p_c");
+        }
+
+        if t
+        {
+            println!("{}", position_n.get_chess_board_string());
+            println!("{}", position.get_chess_board_string());
+            position_n.make_move(&movelist[i], us, enemy);
+            println!("{}", position_n.get_chess_board_string());
+            println!("{}", movelist[i].get_data_string());
+            panic!();
+        }
     }
     nodes
 }

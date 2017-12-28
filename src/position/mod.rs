@@ -178,9 +178,14 @@ impl MoveList
             {
                 let from = find_and_clear_trailing_one(&mut pawn_occupancy) as usize;
 
-                if chess_data::PAWN_QUIET_ATTACK_TABLE[us][from] & occupancy == 0
+                    if chess_data::PAWN_QUIET_ATTACK_TABLE[us][from] & occupancy == 0
                 {
                     let to = chess_data::PAWN_QUIET_ATTACK_TABLE[us][from].trailing_zeros() as usize;
+                    if to == 64
+                    {
+                        println!("{}", orig_position.get_chess_board_string());
+                        println!("{}", orig_position.get_data_string());
+                    }
                     if chess_data::BIT_AT_INDEX[to] & chess_data::HOME_RANK[enemy] != 0
                     {
                         self.add_move(from, to, piecetype::PAWN, piecetype::NO_PIECE, piecetype::KNIGTH, orig_position.en_passant_castling, 0);
@@ -232,7 +237,7 @@ impl MoveList
                         }
                     }
                 }
-                capture_attack_mask = chess_data::PAWN_CAPTURE_ATTACK_TABLE[us][from] & en_passant_castling & chess_data::RANKS[2] & chess_data::RANKS[5];
+                capture_attack_mask = chess_data::PAWN_CAPTURE_ATTACK_TABLE[us][from] & en_passant_castling & (chess_data::RANKS[2] | chess_data::RANKS[5]);
                 if capture_attack_mask != 0
                 {
                     let to = capture_attack_mask.trailing_zeros() as usize;
@@ -872,9 +877,7 @@ impl Position
         let backup_en_passant_castling = self.en_passant_castling;
         self.en_passant_castling = m.en_passant_castling;
         //en passant
-        if (
-            chess_data::RANKS[2] | chess_data::RANKS[5]) & m.en_passant_castling != (chess_data::RANKS[2] | chess_data::RANKS[5]) & backup_en_passant_castling &&
-            m.captured == piecetype::PAWN
+        if chess_data::BIT_AT_INDEX[m.to] & (chess_data::RANKS[2] | chess_data::RANKS[5]) & backup_en_passant_castling != 0 && m.captured == piecetype::PAWN
         {
             self.remove_piece(enemy, piecetype::PAWN, chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to]);
             self.move_piece(us, piecetype::PAWN, chess_data::BIT_AT_INDEX[m.from], chess_data::BIT_AT_INDEX[m.to]);
@@ -918,9 +921,7 @@ impl Position
     {
         self.en_passant_castling = backup_en_passant_castling;
         //en passant
-        if (
-            chess_data::RANKS[2] | chess_data::RANKS[5]) & m.en_passant_castling != (chess_data::RANKS[2] | chess_data::RANKS[5]) & backup_en_passant_castling &&
-            m.captured == piecetype::PAWN
+        if chess_data::BIT_AT_INDEX[m.to] & (chess_data::RANKS[2] | chess_data::RANKS[5]) & backup_en_passant_castling != 0 && m.captured == piecetype::PAWN
         {
             self.add_piece(enemy, piecetype::PAWN, chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to]);
             self.move_piece(us, piecetype::PAWN, chess_data::BIT_AT_INDEX[m.to], chess_data::BIT_AT_INDEX[m.from]);
@@ -968,7 +969,11 @@ impl Position
         for i in 0..ml.len
         {
             let mut next_p = self.clone();
-            next_p.make_move(&ml[i], us, enemy);
+            let backup_en_passant_castling = next_p.make_move(&ml[i], us, enemy);
+            ret += "------------------------------------------------\n";
+            ret += &next_p.get_chess_board_string()[..];
+            ret += "\n";
+            next_p.undo_move(&ml[i], backup_en_passant_castling, us, enemy);
             ret += &next_p.get_chess_board_string()[..];
             ret += "\n";
         }
