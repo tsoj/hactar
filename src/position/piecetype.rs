@@ -1,7 +1,7 @@
 pub type Piecetype = usize;
 
 pub const PAWN: Piecetype = 0;
-pub const KNIGTH: Piecetype = 1;
+pub const KNIGHT: Piecetype = 1;
 pub const BISHOP: Piecetype = 2;
 pub const ROOK: Piecetype = 3;
 pub const QUEEN: Piecetype = 4;

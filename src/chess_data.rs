@@ -112,6 +112,13 @@ pub fn get_attack_mask_king(index: usize, _occupancy: u64) -> u64
     KING_ATTACK_TABLE[index]
 }
 
+pub fn find_and_clear_trailing_one(mask: &mut u64) -> usize
+{
+    let ret = mask.trailing_zeros() as usize;
+    *mask &= (*mask) -1;
+    ret
+}
+
 pub fn get_field_index(s: &str) -> usize
 {
     match s
