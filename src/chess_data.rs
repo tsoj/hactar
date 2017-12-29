@@ -70,36 +70,44 @@ pub const PAWN_HOME_RANK: [u64; 2] = [RANKS[1], RANKS[6]];
 pub const ZOBRIST_RANDOM_BITMASKS_PIECES: [[u64; 64]; 6] = include!("./chess_data_in/zobrist_random_bitmasks_pieces.in");
 pub const ZOBRIST_RANDOM_BITMASKS_PLAYERS: [[u64; 64]; 2] = include!("./chess_data_in/zobrist_random_bitmasks_players.in");
 
+#[inline(always)]
 fn get_hashkey_rank(index: usize, occupancy: u64) -> usize
 {
     (((occupancy >> ((index / 8)*8)) >> 1) & 0b111111) as usize
 }
+#[inline(always)]
 fn get_hashkey_file(index: usize , occupancy: u64) -> usize
 {
     ((((((occupancy >> (index % 8)) & FILES[0] ).wrapping_mul(MAIN_DIAGONAL)) >> 56) >> 1) & 0b111111) as usize
 }
+#[inline(always)]
 fn get_hashkey_diagonal(index: usize, occupancy: u64) -> usize
 {
     (((((occupancy & DIAGONALS_64[index as usize]).wrapping_mul(FILES[0])) >> 56) >> 1) & 0b111111) as usize
 }
+#[inline(always)]
 fn get_hashkey_anti_diagonal(index: usize, occupancy: u64) -> usize
 {
     (((((occupancy & ANTI_DIAGONALS_64[index]).wrapping_mul(FILES[0])) >> 56) >> 1) & 0b111111) as usize
 }
+#[inline(always)]
 pub fn get_attack_mask_knight(index: usize, _occupancy: u64) -> u64
 {
     KNIGHT_ATTACK_TABLE[index]
 }
+#[inline(always)]
 pub fn get_attack_mask_bishop(index: usize, occupancy: u64) -> u64
 {
     ANTI_DIAGONAL_ATTACK_TABLE[index][get_hashkey_anti_diagonal(index, occupancy)] |
     DIAGONAL_ATTACK_TABLE[index][get_hashkey_diagonal(index, occupancy)]
 }
+#[inline(always)]
 pub fn get_attack_mask_rook(index: usize, occupancy: u64) -> u64
 {
     RANK_ATTACK_TABLE[index][get_hashkey_rank(index, occupancy)] |
     FILE_ATTACK_TABLE[index][get_hashkey_file(index, occupancy)]
 }
+#[inline(always)]
 pub fn get_attack_mask_queen(index: usize, occupancy: u64) -> u64
 {
     ANTI_DIAGONAL_ATTACK_TABLE[index][get_hashkey_anti_diagonal(index, occupancy)] |
@@ -107,17 +115,95 @@ pub fn get_attack_mask_queen(index: usize, occupancy: u64) -> u64
     RANK_ATTACK_TABLE[index][get_hashkey_rank(index, occupancy)] |
     FILE_ATTACK_TABLE[index][get_hashkey_file(index, occupancy)]
 }
+#[inline(always)]
 pub fn get_attack_mask_king(index: usize, _occupancy: u64) -> u64
 {
     KING_ATTACK_TABLE[index]
 }
-
+#[inline(always)]
 pub fn find_and_clear_trailing_one(mask: &mut u64) -> usize
 {
     let ret = mask.trailing_zeros() as usize;
     *mask &= (*mask) -1;
     ret
 }
+
+pub fn get_field_notation(i: usize) -> &'static str
+{
+    match i
+    {
+         0 => return "a1",
+         1 => return "b1",
+         2 => return "c1",
+         3 => return "d1",
+         4 => return "e1",
+         5 => return "f1",
+         6 => return "g1",
+         7 => return "h1",
+         8 => return "a2",
+         9 => return "b2",
+         10 => return "c2",
+         11 => return "d2",
+         12 => return "e2",
+         13 => return "f2",
+         14 => return "g2",
+         15 => return "h2",
+         16 => return "a3",
+         17 => return "b3",
+         18 => return "c3",
+         19 => return "d3",
+         20 => return "e3",
+         21 => return "f3",
+         22 => return "g3",
+         23 => return "h3",
+         24 => return "a4",
+         25 => return "b4",
+         26 => return "c4",
+         27 => return "d4",
+         28 => return "e4",
+         29 => return "f4",
+         30 => return "g4",
+         31 => return "h4",
+         32 => return "a5",
+         33 => return "b5",
+         34 => return "c5",
+         35 => return "d5",
+         36 => return "e5",
+         37 => return "f5",
+         38 => return "g5",
+         39 => return "h5",
+         40 => return "a6",
+         41 => return "b6",
+         42 => return "c6",
+         43 => return "d6",
+         44 => return "e6",
+         45 => return "f6",
+         46 => return "g6",
+         47 => return "h6",
+         48 => return "a7",
+         49 => return "b7",
+         50 => return "c7",
+         51 => return "d7",
+         52 => return "e7",
+         53 => return "f7",
+         54 => return "g7",
+         55 => return "h7",
+         56 => return "a8",
+         57 => return "b8",
+         58 => return "c8",
+         59 => return "d8",
+         60 => return "e8",
+         61 => return "f8",
+         62 => return "g8",
+         63 => return "h8",
+        _x =>
+        {
+            println!("Index not between 0 and 63.");
+            return "?";
+        },
+    }
+}
+
 
 pub fn get_field_index(s: &str) -> usize
 {

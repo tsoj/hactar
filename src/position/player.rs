@@ -13,3 +13,26 @@ pub fn switch_player(orig_player: Player) -> Player
     WHITE
 
 }
+
+pub fn get_unicode(player: Player) -> &'static str
+{
+    match player
+    {
+        WHITE =>
+        {
+            return "White";
+        },
+        BLACK =>
+        {
+            return "Black";
+        },
+        NO_PLAYER =>
+        {
+            return "-";
+        },
+        _x =>
+        {
+            return "?";
+        }
+    }
+}

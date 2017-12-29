@@ -1,6 +1,6 @@
+pub mod score;
 use chess_data;
 use position;
-use score;
 
 pub fn evaluate(position: &position::Position, us: position::player::Player, _enemy: position::player::Player) -> score::Score
 {
