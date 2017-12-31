@@ -1,16 +1,16 @@
 use chess_data;
 
-pub type Piecetype = usize;
+pub type Piece = usize;
 
-pub const PAWN: Piecetype = 0;
-pub const KNIGHT: Piecetype = 1;
-pub const BISHOP: Piecetype = 2;
-pub const ROOK: Piecetype = 3;
-pub const QUEEN: Piecetype = 4;
-pub const KING: Piecetype = 5;
-pub const NO_PIECE: Piecetype = 6;
+pub const PAWN: Piece = 0;
+pub const KNIGHT: Piece = 1;
+pub const BISHOP: Piece = 2;
+pub const ROOK: Piece = 3;
+pub const QUEEN: Piece = 4;
+pub const KING: Piece = 5;
+pub const NO_PIECE: Piece = 6;
 
-pub fn get_unicode(piece: Piecetype) -> &'static str
+pub fn get_unicode(piece: Piece) -> &'static str
 {
     match piece
     {

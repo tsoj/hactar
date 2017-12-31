@@ -5,9 +5,9 @@ use position;
 pub fn evaluate(position: &position::Position, us: position::player::Player, _enemy: position::player::Player) -> score::Score
 {
     let mut ret = 0;
-    if position.pieces[position::piecetype::PAWN] != 0
+    if position.pieces[position::piece::PAWN] != 0
     {
-        let mut temp_occupancy = position.pieces[position::piecetype::PAWN];
+        let mut temp_occupancy = position.pieces[position::piece::PAWN];
         loop
         {
             let index = chess_data::find_and_clear_trailing_one(&mut temp_occupancy);
@@ -25,9 +25,9 @@ pub fn evaluate(position: &position::Position, us: position::player::Player, _en
             }
         }
     }
-    if position.pieces[position::piecetype::KNIGHT] != 0
+    if position.pieces[position::piece::KNIGHT] != 0
     {
-        let mut temp_occupancy = position.pieces[position::piecetype::KNIGHT];
+        let mut temp_occupancy = position.pieces[position::piece::KNIGHT];
         loop
         {
             let index = chess_data::find_and_clear_trailing_one(&mut temp_occupancy);
@@ -45,9 +45,9 @@ pub fn evaluate(position: &position::Position, us: position::player::Player, _en
             }
         }
     }
-    if position.pieces[position::piecetype::BISHOP] != 0
+    if position.pieces[position::piece::BISHOP] != 0
     {
-        let mut temp_occupancy = position.pieces[position::piecetype::BISHOP];
+        let mut temp_occupancy = position.pieces[position::piece::BISHOP];
         loop
         {
             let index = chess_data::find_and_clear_trailing_one(&mut temp_occupancy);
@@ -65,9 +65,9 @@ pub fn evaluate(position: &position::Position, us: position::player::Player, _en
             }
         }
     }
-    if position.pieces[position::piecetype::ROOK] != 0
+    if position.pieces[position::piece::ROOK] != 0
     {
-        let mut temp_occupancy = position.pieces[position::piecetype::ROOK];
+        let mut temp_occupancy = position.pieces[position::piece::ROOK];
         loop
         {
             let index = chess_data::find_and_clear_trailing_one(&mut temp_occupancy);
@@ -85,9 +85,9 @@ pub fn evaluate(position: &position::Position, us: position::player::Player, _en
             }
         }
     }
-    if position.pieces[position::piecetype::QUEEN] != 0
+    if position.pieces[position::piece::QUEEN] != 0
     {
-        let mut temp_occupancy = position.pieces[position::piecetype::QUEEN];
+        let mut temp_occupancy = position.pieces[position::piece::QUEEN];
         loop
         {
             let index = chess_data::find_and_clear_trailing_one(&mut temp_occupancy);
@@ -105,9 +105,9 @@ pub fn evaluate(position: &position::Position, us: position::player::Player, _en
             }
         }
     }
-    if position.pieces[position::piecetype::KING] != 0
+    if position.pieces[position::piece::KING] != 0
     {
-        let mut temp_occupancy = position.pieces[position::piecetype::KING];
+        let mut temp_occupancy = position.pieces[position::piece::KING];
         loop
         {
             let _index = chess_data::find_and_clear_trailing_one(&mut temp_occupancy);
