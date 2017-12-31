@@ -19,7 +19,8 @@ fn nega_max(
     }
     let mut current_score: evaluation::score::Score;
     let mut number_legal_moves = 0;
-    let move_list = orig_position.generate_move_list(us, enemy);
+    let mut move_list = orig_position.generate_move_list(us, enemy);
+    move_list.sort_moves_best_first();
     for i in 0..move_list.len
     {
         let mut n_position = orig_position.clone();

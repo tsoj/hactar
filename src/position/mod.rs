@@ -2,6 +2,8 @@
 
 use chess_data;
 use std::ops::{Index,IndexMut};
+use std::cmp::Ordering;
+use evaluation;
 pub mod piecetype;
 pub mod player;
 
@@ -61,7 +63,24 @@ pub struct Move
     pub en_passant_castling: u64,
     pub zobrist_key: u64,
     pub castled: bool,
-    pub captured_en_passant: bool
+    pub captured_en_passant: bool,
+    pub score: evaluation::score::Score
+}
+impl PartialOrd for Move {
+    fn partial_cmp(&self, other: &Move) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl PartialEq for Move {
+    fn eq(&self, other: &Move) -> bool {
+        self.score == other.score
+    }
+}
+impl Eq for Move {}
+impl Ord for Move {
+    fn cmp(&self, other: &Move) -> Ordering {
+        self.score.cmp(&other.score)
+    }
 }
 impl Move
 {
@@ -76,9 +95,9 @@ impl Move
         self.zobrist_key = p.zobrist_key;
         self.castled = p.castled;
         self.captured_en_passant = p.captured_en_passant;
+        self.score = p.score;
     }
 
-    #[inline(always)]
     pub fn clone(&self) -> Move
     {
         Move
@@ -91,7 +110,8 @@ impl Move
             en_passant_castling: self.en_passant_castling,
             zobrist_key: self.zobrist_key,
             castled: self.castled,
-            captured_en_passant: self.captured_en_passant
+            captured_en_passant: self.captured_en_passant,
+            score: self.score
         }
     }
     pub fn empty_move() -> Move
@@ -106,7 +126,8 @@ impl Move
             en_passant_castling: 0,
             zobrist_key: 0,
             castled: false,
-            captured_en_passant: false
+            captured_en_passant: false,
+            score: 0
         }
     }
     pub fn get_data_string(&self) -> String
@@ -137,11 +158,11 @@ impl Move
     }
 }
 
-const MOVE_LIST_MAXIMUM_LENGTH: usize = 128;
+const MOVE_LIST_MAXIMUM_LENGTH: usize = 100;//TODO: needs some testing
 pub struct MoveList
 {
     pub len: usize,
-    a: [Move; MOVE_LIST_MAXIMUM_LENGTH]
+    pub a: [Move; MOVE_LIST_MAXIMUM_LENGTH]
 }
 impl Index<usize> for MoveList
 {
@@ -163,7 +184,6 @@ impl MoveList
         MoveList{len: 0, a: unsafe{::std::mem::uninitialized()}}
     }
 
-    #[inline(always)]
     pub fn add_move(
         &mut self,
         from: usize,
@@ -191,7 +211,8 @@ impl MoveList
             en_passant_castling: en_passant_castling,
             zobrist_key: zobrist_key,
             castled: castled,
-            captured_en_passant: captured_en_passant
+            captured_en_passant: captured_en_passant,
+            score: 0
         };
         self[move_list_length].zobrist_key = orig_position.get_updated_zobristkey(&self[move_list_length], orig_position.en_passant_castling, us, enemy);
         self.len+=1;
@@ -397,6 +418,26 @@ impl MoveList
             }
         }
     }
+
+    pub fn sort_moves_best_first(&mut self)
+    {
+        for i in 0..self.len
+        {
+            /*MVV-LVA*/
+            self[i].score = 0;
+            self[i].score += evaluation::score::SCORE[self[i].promoted];
+            if self[i].captured != piecetype::NO_PIECE
+            {
+                self[i].score += evaluation::score::SCORE[self[i].captured];
+                self[i].score -= evaluation::score::SCORE[self[i].moved]/10;
+            }
+            /*Killer-Move*/
+            //TODO
+            /*Transposition-Table*/
+            //TODO
+        }
+        &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
+    }
 }
 
 pub struct Position
@@ -439,7 +480,6 @@ impl Position
         self.fullmoves_played = p.fullmoves_played;
         self.halfmove_clock = p.halfmove_clock;
     }
-    #[inline(always)]
     pub fn clone(&self) -> Position
     {
         let mut ret: Position = unsafe{::std::mem::uninitialized()};
@@ -453,19 +493,16 @@ impl Position
         ret.halfmove_clock = self.halfmove_clock;
         ret
     }
-    #[inline(always)]
     pub fn add_piece(&mut self, player: player::Player, piece: piecetype::Piecetype , field: u64)
     {
         self.pieces[piece] |=  field;
         self.players[player] |=  field;
     }
-    #[inline(always)]
     pub fn remove_piece(&mut self, player: player::Player, piece: piecetype::Piecetype , field: u64)
     {
         self.pieces[piece] &=  !field;
         self.players[player] &=  !field;
     }
-    #[inline(always)]
     pub fn move_piece(&mut self, player: player::Player, piece: piecetype::Piecetype , from: u64,  to: u64)
     {
         self.remove_piece(player, piece, from);
@@ -875,7 +912,6 @@ impl Position
         move_list.generate_piece_moves(&self, us, enemy, piecetype::KING, chess_data::get_attack_mask_king, new_en_passant_castling);
         move_list
     }
-    #[inline(always)]
     pub fn is_check(&self, us: player::Player, enemy: player::Player, kings_index: usize) -> bool
     {
         let occupancy = self.players[player::WHITE] | self.players[player::BLACK];
@@ -911,7 +947,6 @@ impl Position
         }
         false
     }
-    #[inline(always)]
     pub fn is_check_unkown_kings_index(&self, us: player::Player, enemy: player::Player) -> bool
     {
         let kings_index = (self.pieces[piecetype::KING] & self.players[us]).trailing_zeros() as usize;

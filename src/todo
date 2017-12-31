@@ -1,7 +1,20 @@
 
 PERFT READY
--in out ---DONE
--zobrist hashing ---DONE / NEEDS SOME TESTING
--move generator
--make move undomove
--perft
+- in out ---DONE
+- zobrist hashing ---DONE / NEEDS SOME TESTING
+- move generator ---DONE
+- make-move undo-move ---DONE
+- perft ---DONE
+
+ALPHA-BETA READY
+- transposition table
+- move sorting
+- killer move
+- quiescence search
+- iterative deepening framework
+- aspiration windows
+
+...
+
+MONTE-CARLO READY
+...
