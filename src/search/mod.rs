@@ -26,7 +26,7 @@ fn nega_max(
     let mut current_score: evaluation::score::Score;
     let mut number_legal_moves = 0;
     let mut move_list = orig_position.generate_move_list(us, enemy);
-    move_list.sort_moves_best_first(transposition_table);
+    move_list.sort_moves_best_first();
     for i in 0..move_list.len
     {
         let mut n_position = orig_position.clone();
@@ -37,8 +37,8 @@ fn nega_max(
         }
         number_legal_moves += 1;
 
-        let t_index = (move_list[i].zobrist_key%(transposition_table.len() as u64)) as usize;
-        if  transposition_table[t_index].zobrist_key == move_list[i].zobrist_key && transposition_table[t_index].depth >= depth
+        let t_index = (move_list[i].zobrist_key % (transposition_table.len() as u64)) as usize;
+        if transposition_table[t_index].zobrist_key == move_list[i].zobrist_key && transposition_table[t_index].depth >= depth
         {
             current_score = transposition_table[t_index].score;
         }
@@ -49,14 +49,12 @@ fn nega_max(
             transposition_table[t_index].score = current_score;
             transposition_table[t_index].zobrist_key = move_list[i].zobrist_key;
             transposition_table[t_index].failed_high = false;
-
         }
         if alpha < current_score
         {
             alpha = current_score;
             if beta <= current_score
             {
-                transposition_table[t_index].failed_high = true;
                 break;
             }
         }
@@ -77,9 +75,9 @@ fn nega_max(
 }
 pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> position::mov::Move
 {
-    let mut transposition_table = transposition_table::get_empty_transposition_table(10_000);
+    let mut transposition_table = transposition_table::get_empty_transposition_table(100_000);
     transposition_table.shrink_to_fit();
-    println!("hi");
+
     let now = std::time::SystemTime::now();
     let mut nodes = 1;
     let enemy = position::player::switch_player(orig_position.whose_move);
@@ -90,7 +88,7 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
     let mut current_score;
     let mut best_board_index = 0;
     let mut move_list = orig_position.generate_move_list(us, enemy);
-    move_list.sort_moves_best_first(&transposition_table);
+    move_list.sort_moves_best_first();
     for i in 0..move_list.len
     {
         let mut n_position = orig_position.clone();
@@ -122,7 +120,8 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
         }
     }
     let time;
-    match now.elapsed() {
+    match now.elapsed()
+    {
         Ok(elapsed) =>
         {
             time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f32>().unwrap();
