@@ -18,7 +18,8 @@ fn test_perft() -> bool
     true
 }
 
-fn main() {
+fn main()
+{
     println!("STARTED!");
     print!("TESTING..."); io::stdout().flush();
     if !test_perft()
@@ -32,9 +33,8 @@ fn main() {
     let enemy = position::player::switch_player(p.whose_move);
     println!("{:x}", p.calculate_zobristkey());
     println!("{}", p.get_chess_board_string());
-    let m = search::start_nega_max(p.clone(), 6);
+    let m = search::start_nega_max(p.clone(), 8);
     p.make_move(&m, us, enemy);
     println!("{:x}", p.calculate_zobristkey());
     println!("{}", p.get_chess_board_string());
-
 }

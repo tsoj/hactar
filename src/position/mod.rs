@@ -4,6 +4,8 @@ pub mod piece;
 pub mod player;
 pub mod mov;
 
+pub const START_POS_FEN: &'static str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 fn format_for_chess_board(field_content: &Vec<String>)->String
 {
     let mut s = "".to_string();

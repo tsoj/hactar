@@ -26,7 +26,7 @@ fn nega_max(
     let mut current_score: evaluation::score::Score;
     let mut number_legal_moves = 0;
     let mut move_list = orig_position.generate_move_list(us, enemy);
-    move_list.sort_moves_best_first();
+    move_list.sort_moves_best_first(transposition_table);
     for i in 0..move_list.len
     {
         let mut n_position = orig_position.clone();
@@ -37,14 +37,8 @@ fn nega_max(
         }
         number_legal_moves += 1;
 
-        let l = transposition_table.len() as u64;
-        let t_index = (move_list[i].zobrist_key%transposition_table.len() as u64) as usize;
-        let t = transposition_table[t_index].clone();
-        let a = t.zobrist_key / l;
-        let b = move_list[i].zobrist_key / l;
-        let c = a == b;
-        let d = t.depth >= depth;
-        if  c && d
+        let t_index = (move_list[i].zobrist_key%(transposition_table.len() as u64)) as usize;
+        if  transposition_table[t_index].zobrist_key == move_list[i].zobrist_key && transposition_table[t_index].depth >= depth
         {
             current_score = transposition_table[t_index].score;
         }
@@ -54,13 +48,15 @@ fn nega_max(
             transposition_table[t_index].depth = depth;
             transposition_table[t_index].score = current_score;
             transposition_table[t_index].zobrist_key = move_list[i].zobrist_key;
+            transposition_table[t_index].failed_high = false;
+
         }
-        //current_score = -nega_max(nodes, enemy, us, &n_position, depth - 1, -beta, -alpha, transposition_table);
         if alpha < current_score
         {
             alpha = current_score;
             if beta <= current_score
             {
+                transposition_table[t_index].failed_high = true;
                 break;
             }
         }
@@ -91,9 +87,10 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
     let beta = evaluation::score::SCORE_INFINITY;
     let mut current_score;
     let mut best_board_index = 0;
-    let move_list = orig_position.generate_move_list(us, enemy);
-    let mut transposition_table = transposition_table::get_empty_transposition_table(100000000/*100MB*/);
+    let mut transposition_table = transposition_table::get_empty_transposition_table(10000000/*10MB*/);
     transposition_table.shrink_to_fit();
+    let mut move_list = orig_position.generate_move_list(us, enemy);
+    move_list.sort_moves_best_first(&transposition_table);
     for i in 0..move_list.len
     {
         let mut n_position = orig_position.clone();
