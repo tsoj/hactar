@@ -49,3 +49,42 @@ pub fn get_unicode(piece: Piece) -> &'static str
         }
     }
 }
+pub fn get_notation(piece: Piece) -> &'static str
+{
+    match piece
+    {
+        PAWN =>
+        {
+            return "p";
+        },
+        KNIGHT =>
+        {
+            return "n";
+        },
+        BISHOP =>
+        {
+            return "b";
+        },
+        ROOK =>
+        {
+            return "r";
+        },
+        QUEEN =>
+        {
+            return "q";
+        },
+        KING =>
+        {
+            return "k";
+        },
+        NO_PIECE =>
+        {
+            return "";
+        },
+
+        _x =>
+        {
+            return "?";
+        }
+    }
+}

@@ -60,7 +60,7 @@ pub struct Position
     pub zobrist_key: u64,
     pub whose_move: player::Player,
     pub last_move: mov::Move,
-    pub fullmov_played: u32,
+    pub fullmoves_played: u32,
     pub halfmove_clock: u32
 }
 impl Position
@@ -77,7 +77,7 @@ impl Position
             whose_move: player::NO_PLAYER,
             last_move:
             mov::Move::empty_move(),
-            fullmov_played: 0,
+            fullmoves_played: 0,
             halfmove_clock: 0
         }
     }
@@ -89,7 +89,7 @@ impl Position
         self.zobrist_key = p.zobrist_key;
         self.whose_move = p.whose_move;
         self.last_move.clone_from(&p.last_move);
-        self.fullmov_played = p.fullmov_played;
+        self.fullmoves_played = p.fullmoves_played;
         self.halfmove_clock = p.halfmove_clock;
     }
     pub fn clone(&self) -> Position
@@ -101,7 +101,7 @@ impl Position
         ret.zobrist_key = self.zobrist_key;
         ret.whose_move = self.whose_move;
         ret.last_move.clone_from(&self.last_move);
-        ret.fullmov_played = self.fullmov_played;
+        ret.fullmoves_played = self.fullmoves_played;
         ret.halfmove_clock = self.halfmove_clock;
         ret
     }
@@ -182,7 +182,7 @@ impl Position
             }
         }
         let mut s = format_for_chess_board(&temp);
-        s.push_str(&(self.fullmov_played).to_string());
+        s.push_str(&(self.fullmoves_played).to_string());
         s.push_str(" moves played.\n");
         if self.whose_move == player::WHITE
         {
@@ -200,7 +200,7 @@ impl Position
         ret += "\nWHOSE MOVE: ";
         ret += &self.whose_move.to_string()[..];
         ret += "\nFULLMOVES PLAYED: ";
-        ret += &self.fullmov_played.to_string()[..];
+        ret += &self.fullmoves_played.to_string()[..];
         ret += "\nHALFMOVE CLOCK: ";
         ret += &self.halfmove_clock.to_string()[..];
         ret += "\nZOBRIST KEY: ";
@@ -359,7 +359,7 @@ impl Position
             p.en_passant_castling |= chess_data::BIT_AT_INDEX[en_passant_target_field_index];
         }
         p.halfmove_clock = halfmove_clock.parse::<u32>().unwrap();
-        p.fullmov_played = fullmove_number.parse::<u32>().unwrap();
+        p.fullmoves_played = fullmove_number.parse::<u32>().unwrap();
         p.zobrist_key = p.calculate_zobristkey();
         self.clone_from(&p);
         true
@@ -610,8 +610,13 @@ impl Position
                 self.add_piece(us, m.promoted, chess_data::BIT_AT_INDEX[m.to]);
             }
         }
+        if self.whose_move == player::BLACK
+        {
+            self.fullmoves_played += 1;
+        }
         self.whose_move = player::switch_player(self.whose_move);
         self.zobrist_key = m.zobrist_key;
+
         backup_en_passant_castling
     }
     pub fn undo_move(&mut self, m: &mov::Move, backup_en_passant_castling: u64, us: player::Player, enemy: player::Player)
@@ -654,6 +659,10 @@ impl Position
             {
                 self.add_piece(enemy, m.captured, chess_data::BIT_AT_INDEX[m.to]);
             }
+        }
+        if self.whose_move == player::BLACK
+        {
+            self.fullmoves_played -= 1;
         }
         self.whose_move = player::switch_player(self.whose_move);
         self.update_zobristkey(m, backup_en_passant_castling, us, enemy);

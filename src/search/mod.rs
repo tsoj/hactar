@@ -77,9 +77,11 @@ fn nega_max(
 }
 pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> position::mov::Move
 {
+    let mut transposition_table = transposition_table::get_empty_transposition_table(10_000);
+    transposition_table.shrink_to_fit();
+    println!("hi");
     let now = std::time::SystemTime::now();
     let mut nodes = 1;
-    let mut orig_position = orig_position.clone();
     let enemy = position::player::switch_player(orig_position.whose_move);
     let us = orig_position.whose_move;
     let mut number_legal_moves = 0;
@@ -87,8 +89,6 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
     let beta = evaluation::score::SCORE_INFINITY;
     let mut current_score;
     let mut best_board_index = 0;
-    let mut transposition_table = transposition_table::get_empty_transposition_table(10000000/*10MB*/);
-    transposition_table.shrink_to_fit();
     let mut move_list = orig_position.generate_move_list(us, enemy);
     move_list.sort_moves_best_first(&transposition_table);
     for i in 0..move_list.len
@@ -112,15 +112,15 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
     {
         if orig_position.is_check_unkown_kings_index(us, enemy)
         {
-            //MATE
+            println!("NO LEGAL MOVES: CHECKMATE.");
+            return position::mov::Move::empty_move();
         }
         else
         {
-            //STALEMATE
+            println!("NO LEGAL MOVES: STALEMATE.");
+            return position::mov::Move::empty_move();
         }
     }
-    orig_position.make_move(&move_list[best_board_index], us, enemy);
-    println!("{}", orig_position.get_chess_board_string());
     let time;
     match now.elapsed() {
         Ok(elapsed) =>
@@ -133,11 +133,23 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
             panic!();
         }
     }
-    println!("depth: {}", depth);
-    println!("time needed: {}", time);
-    println!("nodes: {}", nodes);
-    println!("nodes per seconds: {}", nodes as f32 / time);
-    println!("best move:\n{}",move_list[best_board_index].get_data_string());
+    println!("info depth {}", depth);
+    println!("info time {}", time*1000.0);
+    println!("info nodes {}", nodes);
+    println!("info nps {}", nodes as f32 / time);
+    if alpha >= evaluation::score::SCORE_MATE
+    {
+        println!("info score mate {}", (depth as evaluation::score::Score + 1 - alpha + evaluation::score::SCORE_MATE) / 2);
+    }
+    else if alpha <= -evaluation::score::SCORE_MATE
+    {
+        println!("info score mate {}", -(depth as evaluation::score::Score + 1 + alpha + evaluation::score::SCORE_MATE) / 2);
+    }
+    else
+    {
+        println!("info score cp {}", alpha as f32 / evaluation::score::VALUE_PAWN as f32);
+    }
+    println!("bestmove {}",move_list[best_board_index].get_move_notation());
 
     move_list[best_board_index].clone()
 }

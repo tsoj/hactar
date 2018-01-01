@@ -112,6 +112,17 @@ impl Move
         ret += "--------------------------------------------------\n";
         ret
     }
+    pub fn get_move_notation(&self) -> String
+    {
+        let mut ret = "".to_string();
+        ret += chess_data::get_field_notation(self.from);
+        ret += chess_data::get_field_notation(self.to);
+        if self.promoted != position::piece::NO_PIECE
+        {
+            ret+= position::piece::get_notation(self.promoted);
+        }
+        ret
+    }
 }
 
 const MOVE_LIST_MAXIMUM_LENGTH: usize = 100;//TODO: needs some testing
@@ -391,7 +402,7 @@ impl MoveList
             let t_index = (self[i].zobrist_key%(transposition_table.len() as u64)) as usize;
             if transposition_table[t_index].zobrist_key == self[i].zobrist_key && transposition_table[t_index].failed_high
             {
-                self[i].score = 1000;
+                self[i].score += 1000;
             }
         }
         &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
