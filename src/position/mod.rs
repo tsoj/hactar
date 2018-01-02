@@ -376,7 +376,7 @@ impl Position
         ret ^= self.us as u64;
         ret
     }
-    pub fn get_updated_zobristkey(&self, m: &mov::Move, en_passant_castling: u64, us: player::Player, enemy: player::Player) -> u64
+    pub fn get_updated_zobristkey(&self, m: &mov::Move) -> u64
     {
         let mut ret: u64 = self.zobrist_key;
 
@@ -390,44 +390,44 @@ impl Position
             ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.to];
         }
 
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][m.from];
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][m.to];
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][m.from];
+        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][m.to];
 
         if m.captured != piece::NO_PIECE && !m.captured_en_passant
         {
             ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.captured][m.to];
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][m.to];
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.enemy][m.to];
         }
 
-        ret ^= en_passant_castling;
+        ret ^= self.en_passant_castling;
         ret ^= m.en_passant_castling;
-        ret ^= us as u64;
-        ret ^= enemy as u64;
+        ret ^= player::WHITE as u64;
+        ret ^= player::BLACK as u64;
 
         if m.captured_en_passant
         {
-            let captured_index = chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to].trailing_zeros() as usize;
+            let captured_index = chess_data::PAWN_QUIET_ATTACK_TABLE[self.enemy][m.to].trailing_zeros() as usize;
             ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::PAWN][captured_index];
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][captured_index];
+            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.enemy][captured_index];
         }
 
         if m.castled
         {
             //IF QUEENSIDE
-            if m.to == chess_data::CASTLING_QUEENSIDE_KING_TO_INDEX[us]
+            if m.to == chess_data::CASTLING_QUEENSIDE_KING_TO_INDEX[self.us]
             {
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[self.us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[self.us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[self.us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[self.us]];
             }
             //IF KINGSIDE
             else
             {
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[self.us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[self.us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[self.us]];
+                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[self.us]];
             }
         }
         ret
