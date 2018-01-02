@@ -1,6 +1,7 @@
 use position;
+use search;
 
-fn perft(depth: u32, position: &mut position::Position, us: position::player::Player, enemy: position::player::Player) -> u64
+fn perft(depth: search::Depth, orig_position: &position::Position, us: position::player::Player, enemy: position::player::Player) -> u64
 {
     if depth == 0
     {
@@ -8,21 +9,26 @@ fn perft(depth: u32, position: &mut position::Position, us: position::player::Pl
     }
 
     let mut nodes = 0;
-    let move_list = position.generate_move_list(us, enemy);
+    let move_list = orig_position.generate_move_list(us, enemy);
     for i in 0..move_list.len
     {
-        let backup_en_passant_castling = position.make_move(&move_list[i], us, enemy);
-        if !position.is_check_unkown_kings_index(us, enemy)
+        let mut new_position = orig_position.clone();
+        new_position.make_move(&move_list[i], us, enemy);
+        if new_position.calculate_zobristkey() !=new_position.zobrist_key
         {
-            nodes += perft(depth - 1, position, enemy, us);
+            println!("zobrist key generation faulty.");
+            panic!();
         }
-        position.undo_move(&move_list[i], backup_en_passant_castling, us, enemy);
+        if !new_position.is_check_unkown_kings_index(us, enemy)
+        {
+            nodes += perft(depth - 1, &new_position, enemy, us);
+        }
     }
     nodes
 }
-pub fn start_perft(mut position: position::Position, depth: u32) -> u64
+pub fn start_perft(mut position: position::Position, depth: search::Depth) -> u64
 {
-    let enemy = position::player::switch_player(position.whose_move);
+    let enemy =position::player::switch_player(position.whose_move);
     let us = position.whose_move;
     perft(depth, &mut position, us, enemy)
 }
@@ -34,6 +40,7 @@ pub fn test_perft() -> bool
     if start_perft(p, 4) != 4085603
     {
         println!("\nFailed Perft-Test");
+        println!("{}", start_perft(p, 4));
         return false;
     }
     true
