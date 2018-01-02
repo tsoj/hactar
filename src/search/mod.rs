@@ -16,7 +16,6 @@ pub struct Searcher
 }
 impl Searcher
 {
-
     fn nega_max(
         &mut self,
         node_type: node::Node,
@@ -29,7 +28,7 @@ impl Searcher
         self.nodes_count += 1;
         if depth==0
         {
-            return evaluation::evaluate(&orig_position);
+            return self.quiesce(orig_position, depth, alpha, beta);//evaluation::evaluate(&orig_position);
         }
         let mut current_score: evaluation::score::Score;
         let mut number_legal_moves = 0;
@@ -131,5 +130,43 @@ impl Searcher
         }
         println!("bestmove {}", searcher.best_move.get_move_notation());
         searcher.best_move
+    }
+    fn quiesce(
+        &mut self,
+        orig_position: &position::Position,
+        depth: Depth,
+        mut alpha: evaluation::score::Score,
+        beta: evaluation::score::Score,
+    ) -> evaluation::score::Score
+    {
+        self.nodes_count += 1;
+        let stand_pat = evaluation::evaluate(&orig_position);
+        if stand_pat >= beta
+        {
+            return beta;
+        }
+        if alpha < stand_pat
+        {
+            alpha = stand_pat;
+        }
+        let mut current_score: evaluation::score::Score;
+        let mut move_list = orig_position.generate_capture_move_list();
+        move_list.sort_moves_best_first(&self.transposition_table);
+        for i in 0..move_list.len
+        {
+            let mut n_position = orig_position.clone();
+            n_position.make_move(&move_list[i]);
+            current_score = -self.quiesce(&n_position, depth - 1, -beta, -alpha);
+
+            if current_score >= beta
+            {
+                return beta;
+            }
+            if current_score > alpha
+            {
+               alpha = current_score;
+            }
+        }
+        return alpha;
     }
 }

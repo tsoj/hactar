@@ -436,13 +436,25 @@ impl Position
     {
         let mut move_list = mov::MoveList::get_empty_move_list();
         let new_en_passant_castling = self.en_passant_castling & (chess_data::RANKS[0] | chess_data::RANKS[7]);
-        move_list.generate_pawn_moves(&self, new_en_passant_castling);
+        move_list.generate_pawn_moves(&self, new_en_passant_castling, false);
         move_list.generate_castling_moves(&self, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, piece::KNIGHT, chess_data::get_attack_mask_knight, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, piece::BISHOP, chess_data::get_attack_mask_bishop, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, piece::ROOK, chess_data::get_attack_mask_rook, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, piece::QUEEN, chess_data::get_attack_mask_queen, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, piece::KING, chess_data::get_attack_mask_king, new_en_passant_castling);
+        move_list.generate_piece_moves(&self, piece::KNIGHT, chess_data::get_attack_mask_knight, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, piece::BISHOP, chess_data::get_attack_mask_bishop, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, piece::ROOK, chess_data::get_attack_mask_rook, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, piece::QUEEN, chess_data::get_attack_mask_queen, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, piece::KING, chess_data::get_attack_mask_king, new_en_passant_castling, false);
+        move_list
+    }
+    pub fn generate_capture_move_list(&self) -> mov::MoveList
+    {
+        let mut move_list = mov::MoveList::get_empty_move_list();
+        let new_en_passant_castling = self.en_passant_castling & (chess_data::RANKS[0] | chess_data::RANKS[7]);
+        move_list.generate_pawn_moves(&self, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, piece::KNIGHT, chess_data::get_attack_mask_knight, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, piece::BISHOP, chess_data::get_attack_mask_bishop, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, piece::ROOK, chess_data::get_attack_mask_rook, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, piece::QUEEN, chess_data::get_attack_mask_queen, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, piece::KING, chess_data::get_attack_mask_king, new_en_passant_castling, true);
         move_list
     }
     pub fn is_check(&self, us: player::Player, enemy: player::Player, kings_index: usize) -> bool

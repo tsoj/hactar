@@ -153,7 +153,7 @@ impl MoveList
         self[move_list_length].zobrist_key = orig_position.get_updated_zobristkey(&self[move_list_length]);
         self.len+=1;
     }
-    pub fn generate_pawn_moves(&mut self, orig_position: &position::Position, new_en_passant_castling: u64)
+    pub fn generate_pawn_moves(&mut self, orig_position: &position::Position, new_en_passant_castling: u64, only_captures: bool)
     {
         let enemy = orig_position.enemy;
         let us = orig_position.us;
@@ -165,7 +165,7 @@ impl MoveList
             {
                 let from = chess_data::find_and_clear_trailing_one(&mut pawn_occupancy) as usize;
 
-                    if chess_data::PAWN_QUIET_ATTACK_TABLE[us][from] & occupancy == 0
+                if chess_data::PAWN_QUIET_ATTACK_TABLE[us][from] & occupancy == 0 && !only_captures
                 {
                     let to = chess_data::PAWN_QUIET_ATTACK_TABLE[us][from].trailing_zeros() as usize;
                     if chess_data::BIT_AT_INDEX[to] & chess_data::HOME_RANK[enemy] != 0
@@ -300,7 +300,9 @@ impl MoveList
         orig_position: &position::Position,
         piece: position::piece::Piece,
         get_attack_mask: F,
-        new_en_passant_castling: u64)
+        new_en_passant_castling: u64,
+        only_captures: bool
+    )
     where F: Fn(usize, u64) -> u64
     {
         let enemy = orig_position.enemy;
@@ -317,7 +319,7 @@ impl MoveList
                 let mut capture_attack_mask = quiet_attack_mask & orig_position.players[enemy];
                 quiet_attack_mask &= !capture_attack_mask;
                 quiet_attack_mask &= !orig_position.players[us];
-                if quiet_attack_mask != 0
+                if quiet_attack_mask != 0 && !only_captures
                 {
                     loop
                     {
@@ -379,7 +381,7 @@ impl MoveList
             /*Transposition-Table, fail-high first*/
             if transposition_table.failed_high(self[i].zobrist_key)
             {
-                self[i].score = 1000;
+                self[i].score += 1000;
             }
         }
         &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
