@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 use evaluation;
 use position;
 use chess_data;
+use search::transposition_table;
 
 #[derive(Copy, Clone)]
 pub struct Move
@@ -353,7 +354,7 @@ impl MoveList
             }
         }
     }
-    pub fn sort_moves_best_first(&mut self)
+    pub fn sort_moves_best_first(&mut self, transposition_table: &transposition_table::TranspositionTable)
     {
         for i in 0..self.len
         {
@@ -370,7 +371,10 @@ impl MoveList
             //TODO
 
             /*Transposition-Table, fail-high first*/
-            //TODO
+            if transposition_table.failed_high(self[i].zobrist_key)
+            {
+                self[i].score = 1000;
+            }
         }
         &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
     }

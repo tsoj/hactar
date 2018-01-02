@@ -26,7 +26,7 @@ fn nega_max(
     let mut current_score: evaluation::score::Score;
     let mut number_legal_moves = 0;
     let mut move_list = orig_position.generate_move_list(us, enemy);
-    move_list.sort_moves_best_first();
+    move_list.sort_moves_best_first(&transposition_table);
     for i in 0..move_list.len
     {
         let mut n_position = orig_position.clone();
@@ -51,6 +51,7 @@ fn nega_max(
             alpha = current_score;
             if beta <= current_score
             {
+                transposition_table.set_failed_high(move_list[i].zobrist_key);
                 break;
             }
         }
@@ -69,10 +70,8 @@ fn nega_max(
     }
     alpha
 }
-pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> position::mov::Move
+fn start_nega_max(orig_position: &position::Position, depth: Depth, transposition_table: &mut transposition_table::TranspositionTable) -> position::mov::Move
 {
-    let mut transposition_table = transposition_table::TranspositionTable::get_empty_transposition_table(100_000);
-
     let now = std::time::SystemTime::now();
     let mut nodes = 1;
     let enemy = position::player::switch_player(orig_position.whose_move);
@@ -83,7 +82,7 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
     let mut current_score;
     let mut best_board_index = 0;
     let mut move_list = orig_position.generate_move_list(us, enemy);
-    move_list.sort_moves_best_first();
+    move_list.sort_moves_best_first(&transposition_table);
     for i in 0..move_list.len
     {
         let mut n_position = orig_position.clone();
@@ -93,7 +92,7 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
             continue;
         }
         number_legal_moves += 1;
-        current_score = -nega_max(&mut nodes, enemy, us, &n_position, depth - 1, -beta, -alpha, &mut transposition_table);
+        current_score = -nega_max(&mut nodes, enemy, us, &n_position, depth - 1, -beta, -alpha, transposition_table);
         if alpha < current_score
         {
             alpha = current_score;
@@ -127,23 +126,35 @@ pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> positi
             panic!();
         }
     }
-    println!("info depth {}", depth);
-    println!("info time {}", time*1000.0);
-    println!("info nodes {}", nodes);
-    println!("info nps {}", nodes as f32 / time);
+    print!("info ");
+    print!("depth {} ", depth);
+    print!("time {} ", time*1000.0);
+    print!("nodes {} ", nodes);
+    print!("nps {} ", nodes as f32 / time);
     if alpha >= evaluation::score::SCORE_MATE
     {
-        println!("info score mate {}", (depth as evaluation::score::Score + 1 - alpha + evaluation::score::SCORE_MATE) / 2);
+        println!("score mate {}", (depth as evaluation::score::Score + 1 - alpha + evaluation::score::SCORE_MATE) / 2);
     }
     else if alpha <= -evaluation::score::SCORE_MATE
     {
-        println!("info score mate {}", -(depth as evaluation::score::Score + 1 + alpha + evaluation::score::SCORE_MATE) / 2);
+        println!("score mate {}", -(depth as evaluation::score::Score + 1 + alpha + evaluation::score::SCORE_MATE) / 2);
     }
     else
     {
-        println!("info score cp {}", alpha as f32 / evaluation::score::VALUE_PAWN as f32);
+        println!("score cp {}", alpha as f32 / evaluation::score::VALUE_PAWN as f32);
     }
-    println!("bestmove {}",move_list[best_board_index].get_move_notation());
 
     move_list[best_board_index].clone()
+}
+
+pub fn go_depth(orig_position: position::Position, depth: Depth) -> position::mov::Move
+{
+    let mut ret = position::mov::Move::empty_move();
+    let mut transposition_table = transposition_table::TranspositionTable::get_empty_transposition_table(100_000_000);
+    for i in 1..(depth+1)
+    {
+        ret = start_nega_max(&orig_position, i, &mut transposition_table);
+    }
+    println!("bestmove {}", ret.get_move_notation());
+    ret
 }
