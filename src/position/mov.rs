@@ -5,6 +5,7 @@ use evaluation;
 use position;
 use chess_data;
 
+#[derive(Copy, Clone)]
 pub struct Move
 {
     pub from: usize,
@@ -39,36 +40,6 @@ impl Ord for Move
 }
 impl Move
 {
-    pub fn clone_from(&mut self, p: &Move)
-    {
-        self.from = p.from;
-        self.to = p.to;
-        self.moved = p.moved;
-        self.captured = p.captured;
-        self.promoted = p.promoted;
-        self.en_passant_castling = p.en_passant_castling;
-        self.zobrist_key = p.zobrist_key;
-        self.castled = p.castled;
-        self.captured_en_passant = p.captured_en_passant;
-        self.score = p.score;
-    }
-
-    pub fn clone(&self) -> Move
-    {
-        Move
-        {
-            from: self.from,
-            to: self.to,
-            moved: self.moved,
-            captured: self.captured,
-            promoted: self.promoted,
-            en_passant_castling: self.en_passant_castling,
-            zobrist_key: self.zobrist_key,
-            castled: self.castled,
-            captured_en_passant: self.captured_en_passant,
-            score: self.score
-        }
-    }
     pub fn empty_move() -> Move
     {
         Move
@@ -125,6 +96,7 @@ impl Move
 }
 
 const MOVE_LIST_MAXIMUM_LENGTH: usize = 100;//TODO: needs some testing
+#[derive(Copy, Clone)]
 pub struct MoveList
 {
     pub len: usize,

@@ -52,6 +52,7 @@ pub fn get_bitboard_string(bitboard: u64) -> String
   format_for_chess_board(&temp)
 }
 
+#[derive(Copy, Clone)]
 pub struct Position
 {
     pub pieces: [u64; 6], //[Pawns, Knights, Bishops, Rooks, Queens, Kings]
@@ -80,30 +81,6 @@ impl Position
             fullmoves_played: 0,
             halfmove_clock: 0
         }
-    }
-    pub fn clone_from(&mut self, p: &Position)
-    {
-        self.pieces.clone_from(&p.pieces);
-        self.players.clone_from(&p.players);
-        self.en_passant_castling = p.en_passant_castling;
-        self.zobrist_key = p.zobrist_key;
-        self.whose_move = p.whose_move;
-        self.last_move.clone_from(&p.last_move);
-        self.fullmoves_played = p.fullmoves_played;
-        self.halfmove_clock = p.halfmove_clock;
-    }
-    pub fn clone(&self) -> Position
-    {
-        let mut ret: Position = unsafe{::std::mem::uninitialized()};
-        ret.pieces.clone_from(&self.pieces);
-        ret.players.clone_from(&self.players);
-        ret.en_passant_castling = self.en_passant_castling;
-        ret.zobrist_key = self.zobrist_key;
-        ret.whose_move = self.whose_move;
-        ret.last_move.clone_from(&self.last_move);
-        ret.fullmoves_played = self.fullmoves_played;
-        ret.halfmove_clock = self.halfmove_clock;
-        ret
     }
     pub fn add_piece(&mut self, player: player::Player, piece: piece::Piece , field: u64)
     {
@@ -676,11 +653,8 @@ impl Position
         for i in 0..ml.len
         {
             let mut next_p = self.clone();
-            let backup_en_passant_castling = next_p.make_move(&ml[i], us, enemy);
+            next_p.make_move(&ml[i], us, enemy);
             ret += "------------------------------------------------\n";
-            ret += &next_p.get_chess_board_string()[..];
-            ret += "\n";
-            next_p.undo_move(&ml[i], backup_en_passant_castling, us, enemy);
             ret += &next_p.get_chess_board_string()[..];
             ret += "\n";
         }

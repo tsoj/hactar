@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+
 use position;
 use evaluation;
 use std;
@@ -15,7 +15,7 @@ fn nega_max(
     depth: Depth,
     mut alpha: evaluation::score::Score,
     beta: evaluation::score::Score,
-    transposition_table: &mut Vec<transposition_table::TranspositionTableElement>
+    transposition_table: &mut transposition_table::TranspositionTable
 ) -> evaluation::score::Score
 {
     *nodes += 1;
@@ -37,18 +37,14 @@ fn nega_max(
         }
         number_legal_moves += 1;
 
-        let t_index = (move_list[i].zobrist_key % (transposition_table.len() as u64)) as usize;
-        if transposition_table[t_index].zobrist_key == move_list[i].zobrist_key && transposition_table[t_index].depth >= depth
+        match transposition_table.get_score(move_list[i].zobrist_key, depth)
         {
-            current_score = transposition_table[t_index].score;
-        }
-        else
-        {
-            current_score = -nega_max(nodes, enemy, us, &n_position, depth - 1, -beta, -alpha, transposition_table);
-            transposition_table[t_index].depth = depth;
-            transposition_table[t_index].score = current_score;
-            transposition_table[t_index].zobrist_key = move_list[i].zobrist_key;
-            transposition_table[t_index].failed_high = false;
+            Some(x) => current_score = x,
+            None =>
+            {
+                current_score = -nega_max(nodes, enemy, us, &n_position, depth - 1, -beta, -alpha, transposition_table);
+                transposition_table.add(move_list[i].zobrist_key, current_score, depth);
+            }
         }
         if alpha < current_score
         {
@@ -75,8 +71,7 @@ fn nega_max(
 }
 pub fn start_nega_max(orig_position: position::Position, depth: Depth) -> position::mov::Move
 {
-    let mut transposition_table = transposition_table::get_empty_transposition_table(100_000);
-    transposition_table.shrink_to_fit();
+    let mut transposition_table = transposition_table::TranspositionTable::get_empty_transposition_table(100_000);
 
     let now = std::time::SystemTime::now();
     let mut nodes = 1;
