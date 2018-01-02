@@ -1,7 +1,7 @@
 use position;
 use search;
 
-fn perft(depth: search::Depth, orig_position: &position::Position, us: position::player::Player, enemy: position::player::Player) -> u64
+fn perft(depth: search::Depth, orig_position: &position::Position) -> u64
 {
     if depth == 0
     {
@@ -9,28 +9,26 @@ fn perft(depth: search::Depth, orig_position: &position::Position, us: position:
     }
 
     let mut nodes = 0;
-    let move_list = orig_position.generate_move_list(us, enemy);
+    let move_list = orig_position.generate_move_list();
     for i in 0..move_list.len
     {
         let mut new_position = orig_position.clone();
-        new_position.make_move(&move_list[i], us, enemy);
+        new_position.make_move(&move_list[i]);
         if new_position.calculate_zobristkey() !=new_position.zobrist_key
         {
             println!("zobrist key generation faulty.");
             panic!();
         }
-        if !new_position.is_check_unkown_kings_index(us, enemy)
+        if !new_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
         {
-            nodes += perft(depth - 1, &new_position, enemy, us);
+            nodes += perft(depth - 1, &new_position);
         }
     }
     nodes
 }
 pub fn start_perft(mut position: position::Position, depth: search::Depth) -> u64
 {
-    let enemy = position.enemy;
-    let us = position.us;
-    perft(depth, &mut position, us, enemy)
+    perft(depth, &mut position)
 }
 
 pub fn test_perft() -> bool

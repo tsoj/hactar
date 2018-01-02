@@ -153,8 +153,10 @@ impl MoveList
         self[move_list_length].zobrist_key = orig_position.get_updated_zobristkey(&self[move_list_length]);
         self.len+=1;
     }
-    pub fn generate_pawn_moves(&mut self, orig_position: &position::Position, us: position::player::Player, enemy: position::player::Player, new_en_passant_castling: u64)
+    pub fn generate_pawn_moves(&mut self, orig_position: &position::Position, new_en_passant_castling: u64)
     {
+        let enemy = orig_position.enemy;
+        let us = orig_position.us;
         let mut pawn_occupancy = orig_position.pieces[position::piece::PAWN] & orig_position.players[us];
         let occupancy = orig_position.players[position::player::WHITE] | orig_position.players[position::player::BLACK];
         if pawn_occupancy != 0
@@ -243,8 +245,10 @@ impl MoveList
             }
         }
     }
-    pub fn generate_castling_moves(&mut self, orig_position: &position::Position, us: position::player::Player, enemy: position::player::Player, new_en_passant_castling: u64)
+    pub fn generate_castling_moves(&mut self, orig_position: &position::Position, new_en_passant_castling: u64)
     {
+        let enemy = orig_position.enemy;
+        let us = orig_position.us;
         if orig_position.en_passant_castling & chess_data::CASTLING_KING_FROM[us] != 0
         {
             let occupancy = orig_position.players[position::player::WHITE] | orig_position.players[position::player::BLACK];
@@ -294,13 +298,13 @@ impl MoveList
     pub fn generate_piece_moves<F>(
         &mut self,
         orig_position: &position::Position,
-        us: position::player::Player,
-        enemy: position::player::Player,
         piece: position::piece::Piece,
         get_attack_mask: F,
         new_en_passant_castling: u64)
     where F: Fn(usize, u64) -> u64
     {
+        let enemy = orig_position.enemy;
+        let us = orig_position.us;
         let mut piece_occupancy = orig_position.pieces[piece] & orig_position.players[us];
         if piece_occupancy != 0
         {

@@ -432,17 +432,17 @@ impl Position
         }
         ret
     }
-    pub fn generate_move_list(&self, us: player::Player, enemy: player::Player) -> mov::MoveList
+    pub fn generate_move_list(&self) -> mov::MoveList
     {
         let mut move_list = mov::MoveList::get_empty_move_list();
         let new_en_passant_castling = self.en_passant_castling & (chess_data::RANKS[0] | chess_data::RANKS[7]);
-        move_list.generate_pawn_moves(&self, us, enemy, new_en_passant_castling);
-        move_list.generate_castling_moves(&self, us, enemy, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, us, enemy, piece::KNIGHT, chess_data::get_attack_mask_knight, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, us, enemy, piece::BISHOP, chess_data::get_attack_mask_bishop, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, us, enemy, piece::ROOK, chess_data::get_attack_mask_rook, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, us, enemy, piece::QUEEN, chess_data::get_attack_mask_queen, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, us, enemy, piece::KING, chess_data::get_attack_mask_king, new_en_passant_castling);
+        move_list.generate_pawn_moves(&self, new_en_passant_castling);
+        move_list.generate_castling_moves(&self, new_en_passant_castling);
+        move_list.generate_piece_moves(&self, piece::KNIGHT, chess_data::get_attack_mask_knight, new_en_passant_castling);
+        move_list.generate_piece_moves(&self, piece::BISHOP, chess_data::get_attack_mask_bishop, new_en_passant_castling);
+        move_list.generate_piece_moves(&self, piece::ROOK, chess_data::get_attack_mask_rook, new_en_passant_castling);
+        move_list.generate_piece_moves(&self, piece::QUEEN, chess_data::get_attack_mask_queen, new_en_passant_castling);
+        move_list.generate_piece_moves(&self, piece::KING, chess_data::get_attack_mask_king, new_en_passant_castling);
         move_list
     }
     pub fn is_check(&self, us: player::Player, enemy: player::Player, kings_index: usize) -> bool
@@ -489,9 +489,10 @@ impl Position
         }
         self.is_check(us, enemy, kings_index)
     }
-    pub fn make_move(&mut self, m: &mov::Move, us: player::Player, enemy: player::Player) -> u64
+    pub fn make_move(&mut self, m: &mov::Move)
     {
-        let backup_en_passant_castling = self.en_passant_castling;
+        let enemy = self.enemy;
+        let us = self.us;
         self.en_passant_castling = m.en_passant_castling;
         //en passant
         if m.captured_en_passant
@@ -539,19 +540,15 @@ impl Position
         self.us = self.enemy;
         self.enemy = temp;
         self.zobrist_key = m.zobrist_key;
-
-        backup_en_passant_castling
     }
     pub fn get_all_pseudo_legal_mov_string(&mut self) -> String
     {
         let mut ret = "".to_string();
-        let enemy = self.enemy;
-        let us = self.us;
-        let ml = self.generate_move_list(us, enemy);
+        let ml = self.generate_move_list();
         for i in 0..ml.len
         {
             let mut next_p = self.clone();
-            next_p.make_move(&ml[i], us, enemy);
+            next_p.make_move(&ml[i]);
             ret += "------------------------------------------------\n";
             ret += &next_p.get_chess_board_string()[..];
             ret += "\n";

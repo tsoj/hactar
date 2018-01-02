@@ -4,157 +4,132 @@ use evaluation;
 use std;
 pub mod transposition_table;
 pub mod perft;
+pub mod node;
 
 pub type Depth = i32;
 
-fn nega_max(
-    nodes: &mut u64,
-    us: position::player::Player,
-    enemy: position::player::Player,
-    orig_position: &position::Position,
-    depth: Depth,
-    mut alpha: evaluation::score::Score,
-    beta: evaluation::score::Score,
-    transposition_table: &mut transposition_table::TranspositionTable
-) -> evaluation::score::Score
+pub struct Searcher
 {
-    *nodes += 1;
-    if depth==0
-    {
-        return evaluation::evaluate(&orig_position, us, enemy);
-    }
-    let mut current_score: evaluation::score::Score;
-    let mut number_legal_moves = 0;
-    let mut move_list = orig_position.generate_move_list(us, enemy);
-    move_list.sort_moves_best_first(&transposition_table);
-    for i in 0..move_list.len
-    {
-        let mut n_position = orig_position.clone();
-        n_position.make_move(&move_list[i], us, enemy);
-        if n_position.is_check_unkown_kings_index(us, enemy)
-        {
-            continue;
-        }
-        number_legal_moves += 1;
+    transposition_table: transposition_table::TranspositionTable,
+    best_move: position::mov::Move,
+    nodes_count: u64
+}
+impl Searcher
+{
 
-        match transposition_table.get_score(move_list[i].zobrist_key, depth)
+    fn nega_max(
+        &mut self,
+        node_type: node::Node,
+        orig_position: &position::Position,
+        depth: Depth,
+        mut alpha: evaluation::score::Score,
+        beta: evaluation::score::Score,
+    ) -> evaluation::score::Score
+    {
+        self.nodes_count += 1;
+        if depth==0
         {
-            Some(x) => current_score = x,
-            None =>
+            return evaluation::evaluate(&orig_position);
+        }
+        let mut current_score: evaluation::score::Score;
+        let mut number_legal_moves = 0;
+        let mut move_list = orig_position.generate_move_list();
+        move_list.sort_moves_best_first(&self.transposition_table);
+        for i in 0..move_list.len
+        {
+            let mut n_position = orig_position.clone();
+            n_position.make_move(&move_list[i]);
+            if n_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
             {
-                current_score = -nega_max(nodes, enemy, us, &n_position, depth - 1, -beta, -alpha, transposition_table);
-                transposition_table.add(move_list[i].zobrist_key, current_score, depth);
+                continue;
+            }
+            number_legal_moves += 1;
+
+            match self.transposition_table.get_score(move_list[i].zobrist_key, depth)
+            {
+                Some(x) => current_score = x,
+                None =>
+                {
+                    current_score = -self.nega_max(node::NORMAL_NODE, &n_position, depth - 1, -beta, -alpha);
+                    self.transposition_table.add(move_list[i].zobrist_key, current_score, depth);
+                }
+            }
+            if alpha < current_score
+            {
+                alpha = current_score;
+                if node_type == node::ROOT_NODE
+                {
+                    self.best_move = move_list[i].clone();
+                }
+                if beta <= current_score
+                {
+                    self.transposition_table.set_failed_high(move_list[i].zobrist_key);
+                    break;
+                }
             }
         }
-        if alpha < current_score
+        //check for MATE or STALEMATE
+        if number_legal_moves == 0
         {
-            alpha = current_score;
-            if beta <= current_score
+            if orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
             {
-                transposition_table.set_failed_high(move_list[i].zobrist_key);
-                break;
+                alpha = -evaluation::score::SCORE_MATE - depth as evaluation::score::Score;
+            }
+            else
+            {
+                alpha = 0;
             }
         }
+        alpha
     }
-    //check for MATE or STALEMATE
-    if number_legal_moves == 0
+    pub fn go(orig_position: &position::Position, depth: Depth) -> position::mov::Move
     {
-        if orig_position.is_check_unkown_kings_index(us, enemy)
-        {
-            alpha = -evaluation::score::SCORE_MATE - depth as evaluation::score::Score;
-        }
-        else
-        {
-            alpha = 0;
-        }
-    }
-    alpha
-}
-fn start_nega_max(orig_position: &position::Position, depth: Depth, transposition_table: &mut transposition_table::TranspositionTable) -> position::mov::Move
-{
-    let now = std::time::SystemTime::now();
-    let mut nodes = 1;
-    let enemy = orig_position.enemy;
-    let us = orig_position.us;
-    let mut number_legal_moves = 0;
-    let mut alpha = -evaluation::score::SCORE_INFINITY;
-    let beta = evaluation::score::SCORE_INFINITY;
-    let mut current_score;
-    let mut best_board_index = 0;
-    let mut move_list = orig_position.generate_move_list(us, enemy);
-    move_list.sort_moves_best_first(&transposition_table);
-    for i in 0..move_list.len
-    {
-        let mut n_position = orig_position.clone();
-        n_position.make_move(&move_list[i], us, enemy);
-        if n_position.is_check_unkown_kings_index(us, enemy)
-        {
-            continue;
-        }
-        number_legal_moves += 1;
-        current_score = -nega_max(&mut nodes, enemy, us, &n_position, depth - 1, -beta, -alpha, transposition_table);
-        if alpha < current_score
-        {
-            alpha = current_score;
-            best_board_index = i;
-        }
-    }
-    //check for MATE or STALEMATE
-    if number_legal_moves == 0
-    {
-        if orig_position.is_check_unkown_kings_index(us, enemy)
-        {
-            println!("NO LEGAL MOVES: CHECKMATE.");
-            return position::mov::Move::empty_move();
-        }
-        else
-        {
-            println!("NO LEGAL MOVES: STALEMATE.");
-            return position::mov::Move::empty_move();
-        }
-    }
-    let time;
-    match now.elapsed()
-    {
-        Ok(elapsed) =>
-        {
-            time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f32>().unwrap();
-        }
-        Err(e) =>
-        {
-            println!("Error: {:?}", e);
-            panic!();
-        }
-    }
-    print!("info ");
-    print!("depth {} ", depth);
-    print!("time {} ", time*1000.0);
-    print!("nodes {} ", nodes);
-    print!("nps {} ", nodes as f32 / time);
-    if alpha >= evaluation::score::SCORE_MATE
-    {
-        println!("score mate {}", (depth as evaluation::score::Score + 1 - alpha + evaluation::score::SCORE_MATE) / 2);
-    }
-    else if alpha <= -evaluation::score::SCORE_MATE
-    {
-        println!("score mate {}", -(depth as evaluation::score::Score + 1 + alpha + evaluation::score::SCORE_MATE) / 2);
-    }
-    else
-    {
-        println!("score cp {}", alpha as f32 / evaluation::score::VALUE_PAWN as f32);
-    }
+        let mut searcher =
+        Searcher
+            {
+                transposition_table: transposition_table::TranspositionTable::get_empty_transposition_table(100_000_000),
+                best_move: position::mov::Move::empty_move(),
+                nodes_count: 0
+            };
 
-    move_list[best_board_index].clone()
-}
+        for i in 1..(depth+1)
+        {
+            let now = std::time::SystemTime::now();
+            searcher.nodes_count = 0;
+            let score = searcher.nega_max(node::ROOT_NODE, &orig_position, i, -evaluation::score::SCORE_INFINITY, evaluation::score::SCORE_INFINITY);
+            let time;
+            match now.elapsed()
+            {
+                Ok(elapsed) =>
+                {
+                    time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f32>().unwrap();
+                }
+                Err(e) =>
+                {
+                    println!("Error: {:?}", e);
+                    panic!();
+                }
+            }
+            print!("info ");
+            print!("depth {} ", i);
+            print!("time {} ", time*1000.0);
+            print!("nodes {} ", searcher.nodes_count);
+            print!("nps {} ", searcher.nodes_count as f32 / time);
+            if score >= evaluation::score::SCORE_MATE
+            {
+                println!("score mate {}", (depth as evaluation::score::Score + 1 - score + evaluation::score::SCORE_MATE) / 2);
+            }
+            else if score <= -evaluation::score::SCORE_MATE
+            {
+                println!("score mate {}", -(depth as evaluation::score::Score + 1 + score + evaluation::score::SCORE_MATE) / 2);
+            }
+            else
+            {
+                println!("score cp {}", score as f32 / evaluation::score::VALUE_PAWN as f32);
+            }
 
-pub fn go_depth(orig_position: position::Position, depth: Depth) -> position::mov::Move
-{
-    let mut ret = position::mov::Move::empty_move();
-    let mut transposition_table = transposition_table::TranspositionTable::get_empty_transposition_table(100_000_000);
-    for i in 1..(depth+1)
-    {
-        ret = start_nega_max(&orig_position, i, &mut transposition_table);
+        }
+        println!("bestmove {}", searcher.best_move.get_move_notation());
+        searcher.best_move
     }
-    println!("bestmove {}", ret.get_move_notation());
-    ret
 }
