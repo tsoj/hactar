@@ -28,8 +28,8 @@ fn perft(depth: search::Depth, orig_position: &position::Position, us: position:
 }
 pub fn start_perft(mut position: position::Position, depth: search::Depth) -> u64
 {
-    let enemy =position::player::switch_player(position.whose_move);
-    let us = position.whose_move;
+    let enemy = position.enemy;
+    let us = position.us;
     perft(depth, &mut position, us, enemy)
 }
 

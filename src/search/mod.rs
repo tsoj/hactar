@@ -74,8 +74,8 @@ fn start_nega_max(orig_position: &position::Position, depth: Depth, transpositio
 {
     let now = std::time::SystemTime::now();
     let mut nodes = 1;
-    let enemy = position::player::switch_player(orig_position.whose_move);
-    let us = orig_position.whose_move;
+    let enemy = orig_position.enemy;
+    let us = orig_position.us;
     let mut number_legal_moves = 0;
     let mut alpha = -evaluation::score::SCORE_INFINITY;
     let beta = evaluation::score::SCORE_INFINITY;

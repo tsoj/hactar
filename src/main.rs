@@ -21,8 +21,8 @@ fn main()
     //p.set_from_fen(&"5r1k/1p1b1p1p/p2ppb2/5P1B/1q6/1Pr3R1/2PQ2PP/5R1K w - - 0 1".to_string());
     println!("{}", p.get_chess_board_string());
     let m = search::go_depth(p.clone(), 8);
-    let us =  p.whose_move;
-    let enemy = position::player::switch_player(p.whose_move);
+    let us =  p.us;
+    let enemy = p.enemy;
     p.make_move(&m, us, enemy);
     println!("{}", p.get_chess_board_string());
 }

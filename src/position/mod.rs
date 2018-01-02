@@ -59,7 +59,8 @@ pub struct Position
     pub players: [u64; 2], //[White pieces, Black pieces]
     pub en_passant_castling: u64,
     pub zobrist_key: u64,
-    pub whose_move: player::Player,
+    pub us: player::Player,
+    pub enemy: player::Player,
     pub last_move: mov::Move,
     pub fullmoves_played: u32,
     pub halfmove_clock: u32
@@ -68,14 +69,14 @@ impl Position
 {
     pub fn empty_position() -> Position
     {
-
         Position
         {
             pieces: [0,0,0,0,0,0],
             players: [0,0],
             en_passant_castling: 0,
             zobrist_key: 0,
-            whose_move: player::NO_PLAYER,
+            us: player::NO_PLAYER,
+            enemy: player::NO_PLAYER,
             last_move:
             mov::Move::empty_move(),
             fullmoves_played: 0,
@@ -161,7 +162,7 @@ impl Position
         let mut s = format_for_chess_board(&temp);
         s.push_str(&(self.fullmoves_played).to_string());
         s.push_str(" moves played.\n");
-        if self.whose_move == player::WHITE
+        if self.us == player::WHITE
         {
             s.push_str("White to move.\n");
         }
@@ -175,7 +176,7 @@ impl Position
     {
         let mut ret = "".to_string();
         ret += "\nWHOSE MOVE: ";
-        ret += &self.whose_move.to_string()[..];
+        ret += &self.us.to_string()[..];
         ret += "\nFULLMOVES PLAYED: ";
         ret += &self.fullmoves_played.to_string()[..];
         ret += "\nHALFMOVE CLOCK: ";
@@ -298,11 +299,13 @@ impl Position
         }
         if active_color == "w" || active_color == "W"
         {
-            p.whose_move = player::WHITE;
+            p.us = player::WHITE;
+            p.enemy = player::BLACK;
         }
         else if active_color == "b" || active_color == "B"
         {
-            p.whose_move = player::BLACK;
+            p.us = player::BLACK;
+            p.enemy = player::WHITE;
         }
         else
         {
@@ -370,7 +373,7 @@ impl Position
             }
         }
         ret ^= self.en_passant_castling;
-        ret ^= self.whose_move as u64;
+        ret ^= self.us as u64;
         ret
     }
     pub fn get_updated_zobristkey(&self, m: &mov::Move, en_passant_castling: u64, us: player::Player, enemy: player::Player) -> u64
@@ -428,65 +431,6 @@ impl Position
             }
         }
         ret
-    }
-    pub fn update_zobristkey(&mut self, m: &mov::Move, en_passant_castling: u64, us: player::Player, enemy: player::Player)
-    {
-        let mut ret: u64 = self.zobrist_key;
-
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.from];
-        if m.promoted != piece::NO_PIECE
-        {
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.promoted][m.to];
-        }
-        else
-        {
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.to];
-        }
-
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][m.from];
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[us][m.to];
-        if m.captured != piece::NO_PIECE
-        {
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.captured][m.to];
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][m.to];
-        }
-
-        ret ^= en_passant_castling;
-        ret ^= m.en_passant_castling;
-        ret ^= us as u64;
-        ret ^= enemy as u64;
-
-        if m.captured_en_passant
-        {
-            let captured_index = chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to].trailing_zeros() as usize;
-            if captured_index != 64
-            {
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::PAWN][captured_index];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][captured_index];
-            }
-
-        }
-
-        if m.castled
-        {
-            //IF QUEENSIDE
-            if m.en_passant_castling & chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us] == 0
-            {
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[us]];
-            }
-            //IF KINGSIDE
-            else
-            {
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[enemy][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[us]];
-            }
-        }
-        self.zobrist_key = ret;
     }
     pub fn generate_move_list(&self, us: player::Player, enemy: player::Player) -> mov::MoveList
     {
@@ -587,68 +531,22 @@ impl Position
                 self.add_piece(us, m.promoted, chess_data::BIT_AT_INDEX[m.to]);
             }
         }
-        if self.whose_move == player::BLACK
+        if self.us == player::BLACK
         {
             self.fullmoves_played += 1;
         }
-        self.whose_move = player::switch_player(self.whose_move);
+        let temp = self.us;
+        self.us = self.enemy;
+        self.enemy = temp;
         self.zobrist_key = m.zobrist_key;
 
         backup_en_passant_castling
     }
-    pub fn undo_move(&mut self, m: &mov::Move, backup_en_passant_castling: u64, us: player::Player, enemy: player::Player)
-    {
-        self.en_passant_castling = backup_en_passant_castling;
-        //en passant
-        if m.captured_en_passant
-        {
-            self.add_piece(enemy, piece::PAWN, chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to]);
-            self.move_piece(us, piece::PAWN, chess_data::BIT_AT_INDEX[m.to], chess_data::BIT_AT_INDEX[m.from]);
-        }
-        //castling
-        else if m.castled
-        {
-            //IF QUEENSIDE
-            if m.to == chess_data::CASTLING_QUEENSIDE_KING_TO_INDEX[us]
-            {
-                self.move_piece(us, piece::KING, chess_data::CASTLING_QUEENSIDE_KING_TO[us], chess_data::CASTLING_KING_FROM[us]);
-                self.move_piece(us, piece::ROOK, chess_data::CASTLING_QUEENSIDE_ROOK_TO[us], chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us]);
-            }
-            //IF KINGSIDE
-            else
-            {
-                self.move_piece(us, piece::KING, chess_data::CASTLING_KINGSIDE_KING_TO[us], chess_data::CASTLING_KING_FROM[us]);
-                self.move_piece(us, piece::ROOK, chess_data::CASTLING_KINGSIDE_ROOK_TO[us], chess_data::CASTLING_KINGSIDE_ROOK_FROM[us]);
-            }
-        }
-        else
-        {
-            if m.promoted == piece::NO_PIECE
-            {
-                self.move_piece(us, m.moved, chess_data::BIT_AT_INDEX[m.to], chess_data::BIT_AT_INDEX[m.from]);
-            }
-            else
-            {
-                self.remove_piece(us, m.promoted, chess_data::BIT_AT_INDEX[m.to]);
-                self.add_piece(us, m.moved, chess_data::BIT_AT_INDEX[m.from]);
-            }
-            if m.captured != piece::NO_PIECE
-            {
-                self.add_piece(enemy, m.captured, chess_data::BIT_AT_INDEX[m.to]);
-            }
-        }
-        if self.whose_move == player::BLACK
-        {
-            self.fullmoves_played -= 1;
-        }
-        self.whose_move = player::switch_player(self.whose_move);
-        self.update_zobristkey(m, backup_en_passant_castling, us, enemy);
-    }
     pub fn get_all_pseudo_legal_mov_string(&mut self) -> String
     {
         let mut ret = "".to_string();
-        let enemy = player::switch_player(self.whose_move);
-        let us = self.whose_move;
+        let enemy = self.enemy;
+        let us = self.us;
         let ml = self.generate_move_list(us, enemy);
         for i in 0..ml.len
         {
