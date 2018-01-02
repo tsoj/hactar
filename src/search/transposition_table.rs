@@ -1,5 +1,6 @@
 use evaluation::score;
 use search::Depth;
+use search;
 use std::ops::{Index,IndexMut};
 
 #[derive(Copy, Clone)]
@@ -62,6 +63,6 @@ impl TranspositionTable
     }
     pub fn get_empty_transposition_table(size: usize) -> TranspositionTable
     {
-        TranspositionTable{a: vec![TranspositionTableEntry{zobrist_key: 0, score: score::VALUE_NO_PIECE, depth: -1, failed_high: false}; size]}
+        TranspositionTable{a: vec![TranspositionTableEntry{zobrist_key: 0, score: score::VALUE_NO_PIECE, depth: search::MAX_DEPTH + 1, failed_high: false}; size]}
     }
 }

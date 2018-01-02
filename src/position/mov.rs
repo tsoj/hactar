@@ -165,7 +165,7 @@ impl MoveList
             {
                 let from = chess_data::find_and_clear_trailing_one(&mut pawn_occupancy) as usize;
 
-                if chess_data::PAWN_QUIET_ATTACK_TABLE[us][from] & occupancy == 0 && !only_captures
+                if chess_data::PAWN_QUIET_ATTACK_TABLE[us][from] & occupancy == 0
                 {
                     let to = chess_data::PAWN_QUIET_ATTACK_TABLE[us][from].trailing_zeros() as usize;
                     if chess_data::BIT_AT_INDEX[to] & chess_data::HOME_RANK[enemy] != 0
@@ -175,7 +175,7 @@ impl MoveList
                         self.add_move(from, to, position::piece::PAWN, position::piece::NO_PIECE, position::piece::ROOK, new_en_passant_castling, 0, false, false, &orig_position);
                         self.add_move(from, to, position::piece::PAWN, position::piece::NO_PIECE, position::piece::QUEEN, new_en_passant_castling, 0, false, false, &orig_position);
                     }
-                    else
+                    else if !only_captures
                     {
                         self.add_move(from, to, position::piece::PAWN, position::piece::NO_PIECE, position::piece::NO_PIECE, new_en_passant_castling, 0, false, false, &orig_position);
                         if chess_data::BIT_AT_INDEX[from] & chess_data::PAWN_HOME_RANK[us] != 0
@@ -362,7 +362,7 @@ impl MoveList
             }
         }
     }
-    pub fn sort_moves_best_first(&mut self, transposition_table: &transposition_table::TranspositionTable)
+    pub fn sort_moves(&mut self, transposition_table: &transposition_table::TranspositionTable)
     {
         for i in 0..self.len
         {
@@ -374,14 +374,25 @@ impl MoveList
                 self[i].score += evaluation::score::SCORE[self[i].captured];
                 self[i].score -= evaluation::score::SCORE[self[i].moved]/8;
             }
-
-            /*Killer-Move*/
-            //TODO
-
             /*Transposition-Table, fail-high first*/
             if transposition_table.failed_high(self[i].zobrist_key)
             {
                 self[i].score += 1000;
+            }
+        }
+        &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
+    }
+    pub fn sort_moves_quiesce(&mut self)
+    {
+        for i in 0..self.len
+        {
+            self[i].score = 0;
+            /*MVV-LVA*/
+            self[i].score += evaluation::score::SCORE[self[i].promoted];
+            if self[i].captured != position::piece::NO_PIECE
+            {
+                self[i].score += evaluation::score::SCORE[self[i].captured];
+                self[i].score -= evaluation::score::SCORE[self[i].moved]/8;
             }
         }
         &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
