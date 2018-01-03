@@ -362,10 +362,15 @@ impl MoveList
             }
         }
     }
-    pub fn sort_moves(&mut self, transposition_table: &transposition_table::TranspositionTable)
+    pub fn sort_moves(&mut self, transposition_table: &transposition_table::TranspositionTable, pv_move: &Move)
     {
         for i in 0..self.len
         {
+            if pv_move.to == self[i].to && pv_move.from == self[i].from && pv_move.captured == self[i].captured && pv_move.moved == self[i].moved
+            {
+                self[i].score = 10000;
+                continue;
+            }
             self[i].score = 0;
             /*MVV-LVA*/
             self[i].score += evaluation::score::SCORE[self[i].promoted];
@@ -377,7 +382,7 @@ impl MoveList
             /*Transposition-Table, fail-high first*/
             if transposition_table.failed_high(self[i].zobrist_key)
             {
-                self[i].score += 1000;
+                self[i].score = 1000;
             }
         }
         &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));

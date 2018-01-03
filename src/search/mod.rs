@@ -32,12 +32,24 @@ impl Searcher
         self.nodes_count += 1;
         if depth==0
         {
-            return self.quiesce(orig_position, alpha, beta);
+            return self.quiesce(orig_position, alpha, beta, next_pv);
         }
         let mut current_score: evaluation::score::Score;
+
         let mut number_legal_moves = 0;
         let mut move_list = orig_position.generate_move_list();
-        move_list.sort_moves(&self.transposition_table);
+
+        let pv_move;
+        if depth >= 2 && depth-2 < self.pv.len()
+        {
+            pv_move = self.pv[depth-2];
+            self.pv[depth-2] = position::mov::Move::empty_move();
+        }
+        else
+        {
+            pv_move = position::mov::Move::empty_move();
+        };
+        move_list.sort_moves(&self.transposition_table, &pv_move);
         for i in 0..move_list.len
         {
             let mut n_position = orig_position.clone();
@@ -57,7 +69,7 @@ impl Searcher
                     self.transposition_table.add(move_list[i].zobrist_key, current_score, depth);
                 }
             }
-            if alpha < current_score
+            if current_score > alpha
             {
                 alpha = current_score;
                 if node_type == node::ROOT_NODE
@@ -66,7 +78,7 @@ impl Searcher
                 }
                 *next_pv = pv;
                 next_pv.push(move_list[i].clone());
-                if beta <= current_score
+                if current_score >= beta
                 {
                     self.transposition_table.set_failed_high(move_list[i].zobrist_key);
                     break;
@@ -86,6 +98,47 @@ impl Searcher
             }
         }
         alpha
+    }
+    fn quiesce(
+        &mut self,
+        orig_position: &position::Position,
+        mut alpha: evaluation::score::Score,
+        beta: evaluation::score::Score,
+        next_pv: &mut PV
+    ) -> evaluation::score::Score
+    {
+        self.nodes_count += 1;
+        let stand_pat = evaluation::evaluate(&orig_position);
+        if stand_pat >= beta
+        {
+            return beta;
+        }
+        if alpha < stand_pat
+        {
+            alpha = stand_pat;
+        }
+        let mut current_score: evaluation::score::Score;
+        let mut move_list = orig_position.generate_capture_move_list();
+        move_list.sort_moves_quiesce();
+        for i in 0..move_list.len
+        {
+            let mut n_position = orig_position.clone();
+            n_position.make_move(&move_list[i]);
+            let mut pv = Vec::new();
+            current_score = -self.quiesce(&n_position, -beta, -alpha, &mut pv);
+
+            if current_score > alpha
+            {
+                *next_pv = pv;
+                next_pv.push(move_list[i].clone());
+                alpha = current_score;
+                if current_score >= beta
+                {
+                    return beta;
+                }
+            }
+        }
+        return alpha;
     }
     pub fn go(orig_position: &position::Position, depth: Depth) -> position::mov::Move
     {
@@ -145,42 +198,5 @@ impl Searcher
         }
         println!("bestmove {}", searcher.best_move.get_move_notation());
         searcher.best_move
-    }
-    fn quiesce(
-        &mut self,
-        orig_position: &position::Position,
-        mut alpha: evaluation::score::Score,
-        beta: evaluation::score::Score,
-    ) -> evaluation::score::Score
-    {
-        self.nodes_count += 1;
-        let stand_pat = evaluation::evaluate(&orig_position);
-        if stand_pat >= beta
-        {
-            return beta;
-        }
-        if alpha < stand_pat
-        {
-            alpha = stand_pat;
-        }
-        let mut current_score: evaluation::score::Score;
-        let mut move_list = orig_position.generate_capture_move_list();
-        move_list.sort_moves_quiesce();
-        for i in 0..move_list.len
-        {
-            let mut n_position = orig_position.clone();
-            n_position.make_move(&move_list[i]);
-            current_score = -self.quiesce(&n_position, -beta, -alpha);
-
-            if current_score >= beta
-            {
-                return beta;
-            }
-            if current_score > alpha
-            {
-               alpha = current_score;
-            }
-        }
-        return alpha;
     }
 }
