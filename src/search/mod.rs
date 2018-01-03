@@ -10,6 +10,8 @@ pub type Depth = usize;
 pub const MAX_DEPTH: Depth = 64;
 pub type PV = Vec<position::mov::Move>;
 
+const MAX_NUM_CHECKS_IN_QUIESCE: u8 = 2;
+
 pub struct Searcher
 {
     transposition_table: transposition_table::TranspositionTable,
@@ -32,7 +34,7 @@ impl Searcher
         self.nodes_count += 1;
         if depth==0
         {
-            return self.quiesce(orig_position, alpha, beta, next_pv);
+            return self.quiesce(orig_position, alpha, beta, next_pv, 0);
         }
         let mut current_score: evaluation::score::Score;
 
@@ -40,15 +42,11 @@ impl Searcher
         let mut move_list = orig_position.generate_move_list();
 
         let pv_move;
-        if depth >= 2 && depth-2 < self.pv.len()
+        match self.pv.pop()
         {
-            pv_move = self.pv[depth-2];
-            self.pv[depth-2] = position::mov::Move::empty_move();
+            Some(x) => pv_move = x,
+            None => pv_move = position::mov::Move::empty_move()
         }
-        else
-        {
-            pv_move = position::mov::Move::empty_move();
-        };
         move_list.sort_moves(&self.transposition_table, &pv_move);
         for i in 0..move_list.len
         {
@@ -104,18 +102,23 @@ impl Searcher
         orig_position: &position::Position,
         mut alpha: evaluation::score::Score,
         beta: evaluation::score::Score,
-        next_pv: &mut PV
+        next_pv: &mut PV,
+        mut number_checks: u8
     ) -> evaluation::score::Score
     {
         self.nodes_count += 1;
         let stand_pat = evaluation::evaluate(&orig_position);
-        if stand_pat >= beta
-        {
-            return beta;
-        }
-        if alpha < stand_pat
+        if stand_pat > alpha && (!orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) || number_checks > MAX_NUM_CHECKS_IN_QUIESCE)
         {
             alpha = stand_pat;
+            if stand_pat >= beta
+            {
+                return beta;
+            }
+        }
+        else
+        {
+            number_checks += 1;
         }
         let mut current_score: evaluation::score::Score;
         let mut move_list = orig_position.generate_capture_move_list();
@@ -124,8 +127,12 @@ impl Searcher
         {
             let mut n_position = orig_position.clone();
             n_position.make_move(&move_list[i]);
+            if n_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
+            {
+                continue;
+            }
             let mut pv = Vec::new();
-            current_score = -self.quiesce(&n_position, -beta, -alpha, &mut pv);
+            current_score = -self.quiesce(&n_position, -beta, -alpha, &mut pv, number_checks);
 
             if current_score > alpha
             {
@@ -134,11 +141,11 @@ impl Searcher
                 alpha = current_score;
                 if current_score >= beta
                 {
-                    return beta;
+                    break;
                 }
             }
         }
-        return alpha;
+        alpha
     }
     pub fn go(orig_position: &position::Position, depth: Depth) -> position::mov::Move
     {
