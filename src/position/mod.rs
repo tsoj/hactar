@@ -1,8 +1,12 @@
 #![allow(dead_code)]
-use chess_data;
+use chess_data::*;
 pub mod piece;
 pub mod player;
 pub mod mov;
+
+use position::mov::*;
+use position::piece::{Piece, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE};
+use position::player::{Player, WHITE, BLACK, NO_PLAYER};
 
 pub const START_POS_FEN: &'static str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -11,7 +15,7 @@ fn format_for_chess_board(field_content: &Vec<String>)->String
     let mut s = "".to_string();
     for _ in 0..33
     {
-        s.push_str(chess_data::HORIZONTAL_LINE_UNICODE);
+        s.push_str(HORIZONTAL_LINE_UNICODE);
     }
     s.push_str("\n");
     for h in 0..8
@@ -19,18 +23,18 @@ fn format_for_chess_board(field_content: &Vec<String>)->String
         let i = 7 - h;
         for j in 0..8
         {
-            s.push_str(chess_data::VERTICAL_LINE_UNICODE);
+            s.push_str(VERTICAL_LINE_UNICODE);
             s.push_str(" ");
             s.push_str(&field_content[8*i + j]);
             s.push_str(" ");
         }
-        s.push_str(chess_data::VERTICAL_LINE_UNICODE);
+        s.push_str(VERTICAL_LINE_UNICODE);
         s.push_str(" ");
         s.push_str(&((i+1) as u32).to_string());
         s.push_str("\n");
         for _ in 0..33
         {
-            s.push_str(chess_data::HORIZONTAL_LINE_UNICODE);
+            s.push_str(HORIZONTAL_LINE_UNICODE);
         }
         s.push_str("\n");
     }
@@ -40,13 +44,13 @@ fn format_for_chess_board(field_content: &Vec<String>)->String
 pub fn get_bitboard_string(bitboard: u64) -> String
 {
   let mut temp: Vec<String> = vec![String::new(); 64];
-  for  i in 0..chess_data::BIT_AT_INDEX.len()
+  for  i in 0..BIT_AT_INDEX.len()
   {
 
-    temp[i] = chess_data::ZERO_UNICODE.to_string();
-    if (bitboard & chess_data::BIT_AT_INDEX[i]) != 0
+    temp[i] = ZERO_UNICODE.to_string();
+    if (bitboard & BIT_AT_INDEX[i]) != 0
     {
-        temp[i] = chess_data::ONE_UNICODE.to_string();
+        temp[i] = ONE_UNICODE.to_string();
     }
   }
   format_for_chess_board(&temp)
@@ -59,9 +63,9 @@ pub struct Position
     pub players: [u64; 2], //[White pieces, Black pieces]
     pub en_passant_castling: u64,
     pub zobrist_key: u64,
-    pub us: player::Player,
-    pub enemy: player::Player,
-    pub last_move: mov::Move,
+    pub us: Player,
+    pub enemy: Player,
+    pub last_move: Move,
     pub fullmoves_played: u32,
     pub halfmove_clock: u32
 }
@@ -75,25 +79,25 @@ impl Position
             players: [0,0],
             en_passant_castling: 0,
             zobrist_key: 0,
-            us: player::NO_PLAYER,
-            enemy: player::NO_PLAYER,
+            us: NO_PLAYER,
+            enemy: NO_PLAYER,
             last_move:
-            mov::Move::empty_move(),
+            Move::empty_move(),
             fullmoves_played: 0,
             halfmove_clock: 0
         }
     }
-    pub fn add_piece(&mut self, player: player::Player, piece: piece::Piece , field: u64)
+    pub fn add_piece(&mut self, player: Player, piece: Piece , field: u64)
     {
         self.pieces[piece] |=  field;
         self.players[player] |=  field;
     }
-    pub fn remove_piece(&mut self, player: player::Player, piece: piece::Piece , field: u64)
+    pub fn remove_piece(&mut self, player: Player, piece: Piece , field: u64)
     {
         self.pieces[piece] &=  !field;
         self.players[player] &=  !field;
     }
-    pub fn move_piece(&mut self, player: player::Player, piece: piece::Piece , from: u64,  to: u64)
+    pub fn move_piece(&mut self, player: Player, piece: Piece , from: u64,  to: u64)
     {
         self.remove_piece(player, piece, from);
         self.add_piece(player, piece, to);
@@ -101,68 +105,68 @@ impl Position
     pub fn get_chess_board_string(&self) -> String
     {
         let mut temp: Vec<String> = vec![String::new(); 64];
-        for  i in 0..chess_data::BIT_AT_INDEX.len()
+        for  i in 0..BIT_AT_INDEX.len()
         {
             temp[i] = " ".to_string();
-            if (self.players[player::BLACK] & chess_data::BIT_AT_INDEX[i]) != 0
+            if (self.players[BLACK] & BIT_AT_INDEX[i]) != 0
             {
-                if (self.pieces[piece::PAWN] & chess_data::BIT_AT_INDEX[i]) != 0
+                if (self.pieces[PAWN] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::BLACK_PAWN_UNICODE.to_string();
+                    temp[i] = BLACK_PAWN_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::KNIGHT] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[KNIGHT] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::BLACK_KNIGHT_UNICODE.to_string();
+                    temp[i] = BLACK_KNIGHT_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::BISHOP] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[BISHOP] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::BLACK_BISHOP_UNICODE.to_string();
+                    temp[i] = BLACK_BISHOP_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::ROOK] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[ROOK] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::BLACK_ROOK_UNICODE.to_string();
+                    temp[i] = BLACK_ROOK_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::QUEEN] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[QUEEN] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::BLACK_QUEEN_UNICODE.to_string();
+                    temp[i] = BLACK_QUEEN_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::KING] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[KING] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::BLACK_KING_UNICODE.to_string();
+                    temp[i] = BLACK_KING_UNICODE.to_string();
                 }
             }
-            else if (self.players[player::WHITE] & chess_data::BIT_AT_INDEX[i]) != 0
+            else if (self.players[WHITE] & BIT_AT_INDEX[i]) != 0
             {
-                if (self.pieces[piece::PAWN] & chess_data::BIT_AT_INDEX[i]) != 0
+                if (self.pieces[PAWN] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::WHITE_PAWN_UNICODE.to_string();
+                    temp[i] = WHITE_PAWN_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::KNIGHT] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[KNIGHT] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::WHITE_KNIGHT_UNICODE.to_string();
+                    temp[i] = WHITE_KNIGHT_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::BISHOP] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[BISHOP] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::WHITE_BISHOP_UNICODE.to_string();
+                    temp[i] = WHITE_BISHOP_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::ROOK] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[ROOK] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::WHITE_ROOK_UNICODE.to_string();
+                    temp[i] = WHITE_ROOK_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::QUEEN] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[QUEEN] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::WHITE_QUEEN_UNICODE.to_string();
+                    temp[i] = WHITE_QUEEN_UNICODE.to_string();
                 }
-                else if (self.pieces[piece::KING] & chess_data::BIT_AT_INDEX[i]) != 0
+                else if (self.pieces[KING] & BIT_AT_INDEX[i]) != 0
                 {
-                    temp[i] = chess_data::WHITE_KING_UNICODE.to_string();
+                    temp[i] = WHITE_KING_UNICODE.to_string();
                 }
             }
         }
         let mut s = format_for_chess_board(&temp);
         s.push_str(&(self.fullmoves_played).to_string());
         s.push_str(" moves played.\n");
-        if self.us == player::WHITE
+        if self.us == WHITE
         {
             s.push_str("White to move.\n");
         }
@@ -187,21 +191,21 @@ impl Position
         ret += "CASTLING / EN PASSANT\n";
         ret += &get_bitboard_string(self.en_passant_castling)[..];
         ret += "WHITE:\n";
-        ret += &get_bitboard_string(self.players[player::WHITE])[..];
+        ret += &get_bitboard_string(self.players[WHITE])[..];
         ret += "BLACK:\n";
-        ret += &get_bitboard_string(self.players[player::BLACK])[..];
+        ret += &get_bitboard_string(self.players[BLACK])[..];
         ret += "PAWNS:\n";
-        ret += &get_bitboard_string(self.pieces[piece::PAWN])[..];
+        ret += &get_bitboard_string(self.pieces[PAWN])[..];
         ret += "KNIGHTS:\n";
-        ret += &get_bitboard_string(self.pieces[piece::KNIGHT])[..];
+        ret += &get_bitboard_string(self.pieces[KNIGHT])[..];
         ret += "BISHOPS:\n";
-        ret += &get_bitboard_string(self.pieces[piece::BISHOP])[..];
+        ret += &get_bitboard_string(self.pieces[BISHOP])[..];
         ret += "ROOKS:\n";
-        ret += &get_bitboard_string(self.pieces[piece::ROOK])[..];
+        ret += &get_bitboard_string(self.pieces[ROOK])[..];
         ret += "QUEENS:\n";
-        ret += &get_bitboard_string(self.pieces[piece::QUEEN])[..];
+        ret += &get_bitboard_string(self.pieces[QUEEN])[..];
         ret += "KINGS:\n";
-        ret += &get_bitboard_string(self.pieces[piece::KING])[..];
+        ret += &get_bitboard_string(self.pieces[KING])[..];
         ret
     }
     pub fn set_from_fen(&mut self, fen: &String) -> bool
@@ -232,62 +236,62 @@ impl Position
                 '0' => field_counter+=0,
                 'P' =>
                 {
-                    p.add_piece(player::WHITE, piece::PAWN, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(WHITE, PAWN, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'N' =>
                 {
-                    p.add_piece(player::WHITE, piece::KNIGHT, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(WHITE, KNIGHT, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'B' =>
                 {
-                    p.add_piece(player::WHITE, piece::BISHOP, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(WHITE, BISHOP, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'R' =>
                 {
-                    p.add_piece(player::WHITE, piece::ROOK, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(WHITE, ROOK, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'Q' =>
                 {
-                    p.add_piece(player::WHITE, piece::QUEEN, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(WHITE, QUEEN, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'K' =>
                 {
-                    p.add_piece(player::WHITE, piece::KING, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(WHITE, KING, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'p' =>
                 {
-                    p.add_piece(player::BLACK, piece::PAWN, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(BLACK, PAWN, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'n' =>
                 {
-                    p.add_piece(player::BLACK, piece::KNIGHT, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(BLACK, KNIGHT, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'b' =>
                 {
-                    p.add_piece(player::BLACK, piece::BISHOP, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(BLACK, BISHOP, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'r' =>
                 {
-                    p.add_piece(player::BLACK, piece::ROOK, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(BLACK, ROOK, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'q' =>
                 {
-                    p.add_piece(player::BLACK, piece::QUEEN, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(BLACK, QUEEN, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 'k' =>
                 {
-                    p.add_piece(player::BLACK, piece::KING, chess_data::BIT_AT_INDEX[field_counter]);
+                    p.add_piece(BLACK, KING, BIT_AT_INDEX[field_counter]);
                     field_counter+=1;
                 },
                 _x =>
@@ -299,13 +303,13 @@ impl Position
         }
         if active_color == "w" || active_color == "W"
         {
-            p.us = player::WHITE;
-            p.enemy = player::BLACK;
+            p.us = WHITE;
+            p.enemy = BLACK;
         }
         else if active_color == "b" || active_color == "B"
         {
-            p.us = player::BLACK;
-            p.enemy = player::WHITE;
+            p.us = BLACK;
+            p.enemy = WHITE;
         }
         else
         {
@@ -317,10 +321,10 @@ impl Position
             match i
             {
                 '-' => {},
-                'K' => p.en_passant_castling |= chess_data::CASTLING_KINGSIDE_ROOK_FROM[player::WHITE] | chess_data::CASTLING_KING_FROM[player::WHITE],
-                'k' => p.en_passant_castling |= chess_data::CASTLING_KINGSIDE_ROOK_FROM[player::BLACK] | chess_data::CASTLING_KING_FROM[player::BLACK],
-                'Q' => p.en_passant_castling |= chess_data::CASTLING_QUEENSIDE_ROOK_FROM[player::WHITE] | chess_data::CASTLING_KING_FROM[player::WHITE],
-                'q' => p.en_passant_castling |= chess_data::CASTLING_QUEENSIDE_ROOK_FROM[player::BLACK] | chess_data::CASTLING_KING_FROM[player::BLACK],
+                'K' => p.en_passant_castling |= CASTLING_KINGSIDE_ROOK_FROM[WHITE] | CASTLING_KING_FROM[WHITE],
+                'k' => p.en_passant_castling |= CASTLING_KINGSIDE_ROOK_FROM[BLACK] | CASTLING_KING_FROM[BLACK],
+                'Q' => p.en_passant_castling |= CASTLING_QUEENSIDE_ROOK_FROM[WHITE] | CASTLING_KING_FROM[WHITE],
+                'q' => p.en_passant_castling |= CASTLING_QUEENSIDE_ROOK_FROM[BLACK] | CASTLING_KING_FROM[BLACK],
                 _x =>
                 {
                     println!("FEN-string not formatted properly.");
@@ -330,13 +334,13 @@ impl Position
         }
         if en_passant_target_square!="-"
         {
-            let en_passant_target_field_index = chess_data::get_field_index(&en_passant_target_square[..]);
+            let en_passant_target_field_index = get_field_index(&en_passant_target_square[..]);
             if en_passant_target_field_index == 64
             {
                 println!("FEN-string not formatted properly.");
                 return false;
             }
-            p.en_passant_castling |= chess_data::BIT_AT_INDEX[en_passant_target_field_index];
+            p.en_passant_castling |= BIT_AT_INDEX[en_passant_target_field_index];
         }
         p.halfmove_clock = halfmove_clock.parse::<u32>().unwrap();
         p.fullmoves_played = fullmove_number.parse::<u32>().unwrap();
@@ -347,7 +351,7 @@ impl Position
     pub fn calculate_zobristkey(&self) -> u64
     {
         let mut ret: u64 = 0;
-        for i in 0..piece::NO_PIECE
+        for i in 0..NO_PIECE
         {
             if self.pieces[i] != 0
             {
@@ -355,16 +359,16 @@ impl Position
                 loop
                 {
                     let field_index = temp_occupancy.trailing_zeros() as usize;
-                    if (chess_data::BIT_AT_INDEX[field_index] & self.players[player::WHITE])!=0
+                    if (BIT_AT_INDEX[field_index] & self.players[WHITE])!=0
                     {
-                        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[player::WHITE][field_index];
+                        ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[WHITE][field_index];
                     }
                     else
                     {
-                        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[player::BLACK][field_index];
+                        ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[BLACK][field_index];
                     }
-                    ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[i][field_index];
-                    temp_occupancy &= !chess_data::BIT_AT_INDEX[field_index];
+                    ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[i][field_index];
+                    temp_occupancy &= !BIT_AT_INDEX[field_index];
                     if temp_occupancy == 0
                     {
                         break;
@@ -376,132 +380,132 @@ impl Position
         ret ^= self.us as u64;
         ret
     }
-    pub fn get_updated_zobristkey(&self, m: &mov::Move) -> u64
+    pub fn get_updated_zobristkey(&self, m: &Move) -> u64
     {
         let mut ret: u64 = self.zobrist_key;
 
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.from];
-        if m.promoted != piece::NO_PIECE
+        ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.from];
+        if m.promoted != NO_PIECE
         {
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.promoted][m.to];
+            ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[m.promoted][m.to];
         }
         else
         {
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.to];
+            ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[m.moved][m.to];
         }
 
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][m.from];
-        ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][m.to];
+        ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][m.from];
+        ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][m.to];
 
-        if m.captured != piece::NO_PIECE && !m.captured_en_passant
+        if m.captured != NO_PIECE && !m.captured_en_passant
         {
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[m.captured][m.to];
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.enemy][m.to];
+            ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[m.captured][m.to];
+            ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.enemy][m.to];
         }
 
         ret ^= self.en_passant_castling;
         ret ^= m.en_passant_castling;
-        ret ^= player::WHITE as u64;
-        ret ^= player::BLACK as u64;
+        ret ^= WHITE as u64;
+        ret ^= BLACK as u64;
 
         if m.captured_en_passant
         {
-            let captured_index = chess_data::PAWN_QUIET_ATTACK_TABLE[self.enemy][m.to].trailing_zeros() as usize;
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::PAWN][captured_index];
-            ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.enemy][captured_index];
+            let captured_index = PAWN_QUIET_ATTACK_TABLE[self.enemy][m.to].trailing_zeros() as usize;
+            ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[PAWN][captured_index];
+            ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.enemy][captured_index];
         }
 
         if m.castled
         {
             //IF QUEENSIDE
-            if m.to == chess_data::CASTLING_QUEENSIDE_KING_TO_INDEX[self.us]
+            if m.to == CASTLING_QUEENSIDE_KING_TO_INDEX[self.us]
             {
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[self.us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[self.us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][chess_data::CASTLING_QUEENSIDE_ROOK_FROM_INDEX[self.us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][chess_data::CASTLING_QUEENSIDE_ROOK_TO_INDEX[self.us]];
+                ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[ROOK][CASTLING_QUEENSIDE_ROOK_FROM_INDEX[self.us]];
+                ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[ROOK][CASTLING_QUEENSIDE_ROOK_TO_INDEX[self.us]];
+                ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][CASTLING_QUEENSIDE_ROOK_FROM_INDEX[self.us]];
+                ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][CASTLING_QUEENSIDE_ROOK_TO_INDEX[self.us]];
             }
             //IF KINGSIDE
             else
             {
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[self.us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PIECES[piece::ROOK][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[self.us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][chess_data::CASTLING_KINGSIDE_ROOK_FROM_INDEX[self.us]];
-                ret ^= chess_data::ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][chess_data::CASTLING_KINGSIDE_ROOK_TO_INDEX[self.us]];
+                ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[ROOK][CASTLING_KINGSIDE_ROOK_FROM_INDEX[self.us]];
+                ret ^= ZOBRIST_RANDOM_BITMASKS_PIECES[ROOK][CASTLING_KINGSIDE_ROOK_TO_INDEX[self.us]];
+                ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][CASTLING_KINGSIDE_ROOK_FROM_INDEX[self.us]];
+                ret ^= ZOBRIST_RANDOM_BITMASKS_PLAYERS[self.us][CASTLING_KINGSIDE_ROOK_TO_INDEX[self.us]];
             }
         }
         ret
     }
-    pub fn generate_move_list(&self) -> mov::MoveList
+    pub fn generate_move_list(&self) -> MoveList
     {
-        let mut move_list = mov::MoveList::get_empty_move_list();
-        let new_en_passant_castling = self.en_passant_castling & (chess_data::RANKS[0] | chess_data::RANKS[7]);
+        let mut move_list = MoveList::empty_move_list();
+        let new_en_passant_castling = self.en_passant_castling & (RANKS[0] | RANKS[7]);
         move_list.generate_pawn_moves(&self, new_en_passant_castling, false);
         move_list.generate_castling_moves(&self, new_en_passant_castling);
-        move_list.generate_piece_moves(&self, piece::KNIGHT, chess_data::get_attack_mask_knight, new_en_passant_castling, false);
-        move_list.generate_piece_moves(&self, piece::BISHOP, chess_data::get_attack_mask_bishop, new_en_passant_castling, false);
-        move_list.generate_piece_moves(&self, piece::ROOK, chess_data::get_attack_mask_rook, new_en_passant_castling, false);
-        move_list.generate_piece_moves(&self, piece::QUEEN, chess_data::get_attack_mask_queen, new_en_passant_castling, false);
-        move_list.generate_piece_moves(&self, piece::KING, chess_data::get_attack_mask_king, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, KNIGHT, get_attack_mask_knight, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, BISHOP, get_attack_mask_bishop, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, ROOK, get_attack_mask_rook, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, QUEEN, get_attack_mask_queen, new_en_passant_castling, false);
+        move_list.generate_piece_moves(&self, KING, get_attack_mask_king, new_en_passant_castling, false);
         move_list
     }
-    pub fn generate_capture_move_list(&self) -> mov::MoveList
+    pub fn generate_capture_move_list(&self) -> MoveList
     {
-        let mut move_list = mov::MoveList::get_empty_move_list();
-        let new_en_passant_castling = self.en_passant_castling & (chess_data::RANKS[0] | chess_data::RANKS[7]);
+        let mut move_list = MoveList::empty_move_list();
+        let new_en_passant_castling = self.en_passant_castling & (RANKS[0] | RANKS[7]);
         move_list.generate_pawn_moves(&self, new_en_passant_castling, true);
-        move_list.generate_piece_moves(&self, piece::KNIGHT, chess_data::get_attack_mask_knight, new_en_passant_castling, true);
-        move_list.generate_piece_moves(&self, piece::BISHOP, chess_data::get_attack_mask_bishop, new_en_passant_castling, true);
-        move_list.generate_piece_moves(&self, piece::ROOK, chess_data::get_attack_mask_rook, new_en_passant_castling, true);
-        move_list.generate_piece_moves(&self, piece::QUEEN, chess_data::get_attack_mask_queen, new_en_passant_castling, true);
-        move_list.generate_piece_moves(&self, piece::KING, chess_data::get_attack_mask_king, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, KNIGHT, get_attack_mask_knight, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, BISHOP, get_attack_mask_bishop, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, ROOK, get_attack_mask_rook, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, QUEEN, get_attack_mask_queen, new_en_passant_castling, true);
+        move_list.generate_piece_moves(&self, KING, get_attack_mask_king, new_en_passant_castling, true);
         move_list
     }
-    pub fn is_check(&self, us: player::Player, enemy: player::Player, kings_index: usize) -> bool
+    pub fn is_check(&self, us: Player, enemy: Player, kings_index: usize) -> bool
     {
-        let occupancy = self.players[player::WHITE] | self.players[player::BLACK];
+        let occupancy = self.players[WHITE] | self.players[BLACK];
         //QUEEN
-        if chess_data::get_attack_mask_queen(kings_index, occupancy) & self.pieces[piece::QUEEN] & self.players[enemy] != 0
+        if get_attack_mask_queen(kings_index, occupancy) & self.pieces[QUEEN] & self.players[enemy] != 0
         {
             return true;
         }
         //KNIGHT
-        if chess_data::get_attack_mask_knight(kings_index, occupancy) & self.pieces[piece::KNIGHT] & self.players[enemy] != 0
+        if get_attack_mask_knight(kings_index, occupancy) & self.pieces[KNIGHT] & self.players[enemy] != 0
         {
             return true;
         }
         //BISHOP
-        if chess_data::get_attack_mask_bishop(kings_index, occupancy) & self.pieces[piece::BISHOP] & self.players[enemy] != 0
+        if get_attack_mask_bishop(kings_index, occupancy) & self.pieces[BISHOP] & self.players[enemy] != 0
         {
             return true;
         }
         //ROOK
-        if chess_data::get_attack_mask_rook(kings_index, occupancy) & self.pieces[piece::ROOK] & self.players[enemy] != 0
+        if get_attack_mask_rook(kings_index, occupancy) & self.pieces[ROOK] & self.players[enemy] != 0
         {
             return true;
         }
         //KING
-        if chess_data::get_attack_mask_king(kings_index, occupancy) & self.pieces[piece::KING] & self.players[enemy] != 0
+        if get_attack_mask_king(kings_index, occupancy) & self.pieces[KING] & self.players[enemy] != 0
         {
             return true;
         }
         //PAWN
-        if chess_data::PAWN_CAPTURE_ATTACK_TABLE[us][kings_index] & self.pieces[piece::PAWN] & self.players[enemy] != 0
+        if PAWN_CAPTURE_ATTACK_TABLE[us][kings_index] & self.pieces[PAWN] & self.players[enemy] != 0
         {
             return true;
         }
         false
     }
-    pub fn is_check_unkown_kings_index(&self, us: player::Player, enemy: player::Player) -> bool
+    pub fn is_check_unkown_kings_index(&self, us: Player, enemy: Player) -> bool
     {
-        let kings_index = (self.pieces[piece::KING] & self.players[us]).trailing_zeros() as usize;
+        let kings_index = (self.pieces[KING] & self.players[us]).trailing_zeros() as usize;
         if kings_index == 64
         {
             return true;
         }
         self.is_check(us, enemy, kings_index)
     }
-    pub fn make_move(&mut self, m: &mov::Move)
+    pub fn make_move(&mut self, m: &Move)
     {
         let enemy = self.enemy;
         let us = self.us;
@@ -509,42 +513,42 @@ impl Position
         //en passant
         if m.captured_en_passant
         {
-            self.remove_piece(enemy, piece::PAWN, chess_data::PAWN_QUIET_ATTACK_TABLE[enemy][m.to]);
-            self.move_piece(us, piece::PAWN, chess_data::BIT_AT_INDEX[m.from], chess_data::BIT_AT_INDEX[m.to]);
+            self.remove_piece(enemy, PAWN, PAWN_QUIET_ATTACK_TABLE[enemy][m.to]);
+            self.move_piece(us, PAWN, BIT_AT_INDEX[m.from], BIT_AT_INDEX[m.to]);
         }
         //castling
         else if m.castled
         {
             //IF QUEENSIDE
-            if m.to == chess_data::CASTLING_QUEENSIDE_KING_TO_INDEX[us]
+            if m.to == CASTLING_QUEENSIDE_KING_TO_INDEX[us]
             {
-                self.move_piece(us, piece::KING, chess_data::CASTLING_KING_FROM[us], chess_data::CASTLING_QUEENSIDE_KING_TO[us]);
-                self.move_piece(us, piece::ROOK, chess_data::CASTLING_QUEENSIDE_ROOK_FROM[us], chess_data::CASTLING_QUEENSIDE_ROOK_TO[us]);
+                self.move_piece(us, KING, CASTLING_KING_FROM[us], CASTLING_QUEENSIDE_KING_TO[us]);
+                self.move_piece(us, ROOK, CASTLING_QUEENSIDE_ROOK_FROM[us], CASTLING_QUEENSIDE_ROOK_TO[us]);
             }
             //IF KINGSIDE
             else
             {
-                self.move_piece(us, piece::KING, chess_data::CASTLING_KING_FROM[us], chess_data::CASTLING_KINGSIDE_KING_TO[us]);
-                self.move_piece(us, piece::ROOK, chess_data::CASTLING_KINGSIDE_ROOK_FROM[us], chess_data::CASTLING_KINGSIDE_ROOK_TO[us]);
+                self.move_piece(us, KING, CASTLING_KING_FROM[us], CASTLING_KINGSIDE_KING_TO[us]);
+                self.move_piece(us, ROOK, CASTLING_KINGSIDE_ROOK_FROM[us], CASTLING_KINGSIDE_ROOK_TO[us]);
             }
         }
         else
         {
-            if m.captured != piece::NO_PIECE
+            if m.captured != NO_PIECE
             {
-                self.remove_piece(enemy, m.captured, chess_data::BIT_AT_INDEX[m.to]);
+                self.remove_piece(enemy, m.captured, BIT_AT_INDEX[m.to]);
             }
-            if m.promoted == piece::NO_PIECE
+            if m.promoted == NO_PIECE
             {
-                self.move_piece(us, m.moved, chess_data::BIT_AT_INDEX[m.from], chess_data::BIT_AT_INDEX[m.to]);
+                self.move_piece(us, m.moved, BIT_AT_INDEX[m.from], BIT_AT_INDEX[m.to]);
             }
             else
             {
-                self.remove_piece(us, m.moved, chess_data::BIT_AT_INDEX[m.from]);
-                self.add_piece(us, m.promoted, chess_data::BIT_AT_INDEX[m.to]);
+                self.remove_piece(us, m.moved, BIT_AT_INDEX[m.from]);
+                self.add_piece(us, m.promoted, BIT_AT_INDEX[m.to]);
             }
         }
-        if self.us == player::BLACK
+        if self.us == BLACK
         {
             self.fullmoves_played += 1;
         }

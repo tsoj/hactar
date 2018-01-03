@@ -1,4 +1,4 @@
-use chess_data;
+use chess_data::*;
 
 pub type Piece = usize;
 
@@ -16,27 +16,27 @@ pub fn get_unicode(piece: Piece) -> &'static str
     {
         PAWN =>
         {
-            return chess_data::WHITE_PAWN_UNICODE;
+            return WHITE_PAWN_UNICODE;
         },
         KNIGHT =>
         {
-            return chess_data::WHITE_KNIGHT_UNICODE;
+            return WHITE_KNIGHT_UNICODE;
         },
         BISHOP =>
         {
-            return chess_data::WHITE_BISHOP_UNICODE;
+            return WHITE_BISHOP_UNICODE;
         },
         ROOK =>
         {
-            return chess_data::WHITE_ROOK_UNICODE;
+            return WHITE_ROOK_UNICODE;
         },
         QUEEN =>
         {
-            return chess_data::WHITE_QUEEN_UNICODE;
+            return WHITE_QUEEN_UNICODE;
         },
         KING =>
         {
-            return chess_data::WHITE_KING_UNICODE;
+            return WHITE_KING_UNICODE;
         },
         NO_PIECE =>
         {

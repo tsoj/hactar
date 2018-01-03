@@ -1,13 +1,12 @@
-use evaluation::score;
-use search::Depth;
-use search;
+use evaluation::score::{Score, VALUE_NO_PIECE};
+use search::{Depth, MAX_DEPTH};
 use std::ops::{Index,IndexMut};
 
 #[derive(Copy, Clone)]
 pub struct TranspositionTableEntry
 {
     zobrist_key: u64,
-    score: score::Score,
+    score: Score,
     depth: Depth,
     failed_high: bool
 }
@@ -31,7 +30,7 @@ impl IndexMut<usize> for TranspositionTable
 }
 impl TranspositionTable
 {
-    pub fn add(&mut self, zobrist_key: u64, current_score: score::Score, depth: Depth)
+    pub fn add(&mut self, zobrist_key: u64, current_score: Score, depth: Depth)
     {
         let t_index = (zobrist_key % (self.a.len() as u64)) as usize;
         self[t_index].depth = depth;
@@ -39,7 +38,7 @@ impl TranspositionTable
         self[t_index].zobrist_key = zobrist_key;
         self[t_index].failed_high = false;
     }
-    pub fn get_score(&self, zobrist_key: u64, min_depth: Depth) -> Option<score::Score>
+    pub fn get_score(&self, zobrist_key: u64, min_depth: Depth) -> Option<Score>
     {
         let t_index = (zobrist_key % (self.a.len() as u64)) as usize;
         if self[t_index].zobrist_key == zobrist_key && self[t_index].depth >= min_depth
@@ -63,6 +62,6 @@ impl TranspositionTable
     }
     pub fn get_empty_transposition_table(size: usize) -> TranspositionTable
     {
-        TranspositionTable{a: vec![TranspositionTableEntry{zobrist_key: 0, score: score::VALUE_NO_PIECE, depth: search::MAX_DEPTH + 1, failed_high: false}; size]}
+        TranspositionTable{a: vec![TranspositionTableEntry{zobrist_key: 0, score: VALUE_NO_PIECE, depth: MAX_DEPTH + 1, failed_high: false}; size]}
     }
 }
