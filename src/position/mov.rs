@@ -366,7 +366,7 @@ impl MoveList
     {
         for i in 0..self.len
         {
-            if pv_move.to == self[i].to && pv_move.from == self[i].from && pv_move.captured == self[i].captured && pv_move.moved == self[i].moved
+            if pv_move.to == self[i].to && pv_move.from == self[i].from
             {
                 self[i].score = 10000;
                 continue;

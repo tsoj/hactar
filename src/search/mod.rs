@@ -28,18 +28,30 @@ impl Searcher
         depth: Depth,
         mut alpha: evaluation::score::Score,
         beta: evaluation::score::Score,
-        next_pv: &mut PV
+        pv: &mut PV
     ) -> evaluation::score::Score
     {
         self.nodes_count += 1;
+
+        match self.transposition_table.get_score(orig_position.zobrist_key, depth)
+        {
+            Some(x) => return x,
+            None => {}
+        }
         if depth==0
         {
-            return self.quiesce(orig_position, alpha, beta, next_pv, 0);
+            return self.quiesce(orig_position, alpha, beta, pv, 0);
+        }
+        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && node_type!= node::PV_NODE && depth >= 2 && beta != evaluation::score::SCORE_INFINITY
+        {
+            let current_score = evaluation::evaluate(&orig_position);
+            if current_score >= beta
+            {
+                return current_score;
+            }
         }
         let mut current_score: evaluation::score::Score;
-
         let mut number_legal_moves = 0;
-        let mut move_list = orig_position.generate_move_list();
 
         let pv_move;
         match self.pv.pop()
@@ -47,6 +59,7 @@ impl Searcher
             Some(x) => pv_move = x,
             None => pv_move = position::mov::Move::empty_move()
         }
+        let mut move_list = orig_position.generate_move_list();
         move_list.sort_moves(&self.transposition_table, &pv_move);
         for i in 0..move_list.len
         {
@@ -57,16 +70,16 @@ impl Searcher
                 continue;
             }
             number_legal_moves += 1;
-            let mut pv = Vec::new();
-            match self.transposition_table.get_score(move_list[i].zobrist_key, depth)
-            {
-                Some(x) => current_score = x,
-                None =>
-                {
-                    current_score = -self.nega_max(node::NORMAL_NODE, &n_position, depth - 1, -beta, -alpha, &mut pv);
-                    self.transposition_table.add(move_list[i].zobrist_key, current_score, depth);
-                }
-            }
+            let mut candidate_pv = Vec::new();
+            current_score = -self.nega_max(
+                if i == 0{ node::PV_NODE }else{ node::NORMAL_NODE },
+                &n_position,
+                depth -1,
+                -beta,
+                -alpha,
+                &mut candidate_pv
+            );
+            self.transposition_table.add(move_list[i].zobrist_key, -current_score, depth -1);
             if current_score > alpha
             {
                 alpha = current_score;
@@ -74,8 +87,8 @@ impl Searcher
                 {
                     self.best_move = move_list[i].clone();
                 }
-                *next_pv = pv;
-                next_pv.push(move_list[i].clone());
+                *pv = candidate_pv;
+                pv.push(move_list[i]);
                 if current_score >= beta
                 {
                     self.transposition_table.set_failed_high(move_list[i].zobrist_key);
@@ -102,7 +115,7 @@ impl Searcher
         orig_position: &position::Position,
         mut alpha: evaluation::score::Score,
         beta: evaluation::score::Score,
-        next_pv: &mut PV,
+        pv: &mut PV,
         mut number_checks: u8
     ) -> evaluation::score::Score
     {
@@ -131,13 +144,13 @@ impl Searcher
             {
                 continue;
             }
-            let mut pv = Vec::new();
-            current_score = -self.quiesce(&n_position, -beta, -alpha, &mut pv, number_checks);
+            let mut candidate_pv = Vec::new();
+            current_score = -self.quiesce(&n_position, -beta, -alpha, &mut candidate_pv, number_checks);
 
             if current_score > alpha
             {
-                *next_pv = pv;
-                next_pv.push(move_list[i].clone());
+                *pv = candidate_pv;
+                pv.push(move_list[i]);
                 alpha = current_score;
                 if current_score >= beta
                 {
@@ -162,9 +175,9 @@ impl Searcher
         {
             let now = std::time::SystemTime::now();
             searcher.nodes_count = 0;
-            let mut next_pv = Vec::new();
-            let score = searcher.nega_max(node::ROOT_NODE, &orig_position, i, -evaluation::score::SCORE_INFINITY, evaluation::score::SCORE_INFINITY, &mut next_pv);
-            searcher.pv = next_pv;
+            let mut pv = Vec::new();
+            let score = searcher.nega_max(node::ROOT_NODE, &orig_position, i, -evaluation::score::SCORE_INFINITY, evaluation::score::SCORE_INFINITY, &mut pv);
+            searcher.pv = pv;
             let time;
             match now.elapsed()
             {
