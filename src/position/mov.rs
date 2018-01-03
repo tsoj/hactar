@@ -402,4 +402,19 @@ impl MoveList
         }
         &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
     }
+    pub fn get_number_legal_moves(&self, orig_position: &position::Position) -> usize
+    {
+        let mut number_legal_moves = 0;
+        for i in 0..self.len
+        {
+            let mut n_position = orig_position.clone();
+            n_position.make_move(&self[i]);
+            if n_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
+            {
+                continue;
+            }
+            number_legal_moves += 1;
+        }
+        number_legal_moves
+    }
 }

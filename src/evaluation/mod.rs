@@ -2,9 +2,8 @@ pub mod score;
 use chess_data;
 use position;
 
-pub fn evaluate(position: &position::Position) -> score::Score
+pub fn evaluate(position: &position::Position, us: position::player::Player, _enemy: position::player::Player) -> score::Score
 {
-    let us = position.us;
     let mut ret = 0;
     if position.pieces[position::piece::PAWN] != 0
     {

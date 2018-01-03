@@ -42,23 +42,24 @@ impl Searcher
         {
             return self.quiesce(orig_position, alpha, beta, pv, 0);
         }
-        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && node_type!= node::PV_NODE && depth >= 2 && beta != evaluation::score::SCORE_INFINITY
+        let mut current_score: evaluation::score::Score;
+        let mut number_legal_moves = 0;
+
+        let pv_move = match self.pv.pop()
         {
-            let current_score = evaluation::evaluate(&orig_position);
+            Some(x) => x,
+            None => position::mov::Move::empty_move()
+        };
+
+        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && depth <= /*6 or */5/* or 4 or 3*/
+        {
+            let current_score = evaluation::evaluate(&orig_position, orig_position.us, orig_position.enemy);
             if current_score >= beta
             {
                 return current_score;
             }
         }
-        let mut current_score: evaluation::score::Score;
-        let mut number_legal_moves = 0;
 
-        let pv_move;
-        match self.pv.pop()
-        {
-            Some(x) => pv_move = x,
-            None => pv_move = position::mov::Move::empty_move()
-        }
         let mut move_list = orig_position.generate_move_list();
         move_list.sort_moves(&self.transposition_table, &pv_move);
         for i in 0..move_list.len
@@ -120,7 +121,7 @@ impl Searcher
     ) -> evaluation::score::Score
     {
         self.nodes_count += 1;
-        let stand_pat = evaluation::evaluate(&orig_position);
+        let stand_pat = evaluation::evaluate(&orig_position, orig_position.us, orig_position.enemy);
         if stand_pat > alpha && (!orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) || number_checks > MAX_NUM_CHECKS_IN_QUIESCE)
         {
             alpha = stand_pat;
@@ -196,11 +197,11 @@ impl Searcher
             print!("time {} ", time*1000.0);
             print!("nodes {} ", searcher.nodes_count);
             print!("nps {} ", searcher.nodes_count as f32 / time);
-            if score >= evaluation::score::SCORE_MATE
+            if false//score >= evaluation::score::SCORE_MATE
             {
                 print!("score mate {}", (depth as evaluation::score::Score + 1 - score + evaluation::score::SCORE_MATE) / 2);
             }
-            else if score <= -evaluation::score::SCORE_MATE
+            else if false//score <= -evaluation::score::SCORE_MATE
             {
                 print!("score mate {}", -(depth as evaluation::score::Score + 1 + score + evaluation::score::SCORE_MATE) / 2);
             }
