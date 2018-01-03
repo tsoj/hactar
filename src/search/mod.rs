@@ -102,7 +102,7 @@ impl Searcher
         {
             if orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
             {
-                alpha = -evaluation::score::SCORE_MATE - depth as evaluation::score::Score;
+                alpha = -(evaluation::score::SCORE_MATE + depth as evaluation::score::Score);
             }
             else
             {
@@ -197,13 +197,13 @@ impl Searcher
             print!("time {} ", time*1000.0);
             print!("nodes {} ", searcher.nodes_count);
             print!("nps {} ", searcher.nodes_count as f32 / time);
-            if false//score >= evaluation::score::SCORE_MATE
+            if score >= evaluation::score::SCORE_MATE
             {
-                print!("score mate {}", (depth as evaluation::score::Score + 1 - score + evaluation::score::SCORE_MATE) / 2);
+                print!("score mate {}", (-score + evaluation::score::SCORE_MATE + i as evaluation::score::Score + 1)/2);
             }
-            else if false//score <= -evaluation::score::SCORE_MATE
+            else if score <= -evaluation::score::SCORE_MATE
             {
-                print!("score mate {}", -(depth as evaluation::score::Score + 1 + score + evaluation::score::SCORE_MATE) / 2);
+                print!("score mate {}", -(score + evaluation::score::SCORE_MATE + i as evaluation::score::Score + 1)/2);
             }
             else
             {
