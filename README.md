@@ -1,5 +1,5 @@
 # hactar
-Hactar is a simple chessengine written in rust.
+___hactar___ is a simple chessengine written in rust.
 # license
 Copyright 2018 Tsoj Tsoj
 

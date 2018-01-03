@@ -88,3 +88,38 @@ pub fn get_notation(piece: Piece) -> &'static str
         }
     }
 }
+pub fn get_piece(s: &str) -> Piece
+{
+    match s
+    {
+        "p" | "P" =>
+        {
+            return PAWN;
+        },
+        "n" | "N" =>
+        {
+            return KNIGHT;
+        },
+        "b" | "B" =>
+        {
+            return BISHOP;
+        },
+        "r" | "R" =>
+        {
+            return ROOK;
+        },
+        "q" | "Q" =>
+        {
+            return QUEEN;
+        },
+        "k" | "K" =>
+        {
+            return KING;
+        },
+
+        _x =>
+        {
+            return NO_PIECE;
+        }
+    }
+}

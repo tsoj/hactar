@@ -8,8 +8,6 @@ use position::mov::*;
 use position::piece::{Piece, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE};
 use position::player::{Player, WHITE, BLACK, NO_PLAYER};
 
-pub const START_POS_FEN: &'static str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
 fn format_for_chess_board(field_content: &Vec<String>)->String
 {
     let mut s = "".to_string();
@@ -168,11 +166,11 @@ impl Position
         s.push_str(" moves played.\n");
         if self.us == WHITE
         {
-            s.push_str("White to move.\n");
+            s.push_str("White to move.");
         }
         else
         {
-            s.push_str("Black to move.\n");
+            s.push_str("Black to move.");
         }
         s
     }
