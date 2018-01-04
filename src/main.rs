@@ -6,6 +6,7 @@ mod evaluation;
 
 use search::Searcher;
 use search::perft;
+use search::Depth;
 use position::{Position, piece};
 use position::mov::Move;
 use position::piece::{PAWN, NO_PIECE};
@@ -133,9 +134,16 @@ fn get_move(m: &String, position: &Position) -> Move
     new_move.zobrist_key = position.get_updated_zobristkey(&new_move);
     new_move
 }
-fn go( position: &Position, _params: std::str::SplitWhitespace)
+fn go( position: &Position, mut params: std::str::SplitWhitespace)
 {
-    Searcher::go(&position, 15);
+    let mut depth = 10;
+    match params.next()
+    {
+        Some("depth") => depth = params.next().unwrap().parse::<Depth>().unwrap(),
+        Some(x) => println!("Unknown parameter: {}", x),
+        None => {}
+    }
+    Searcher::go(&position, depth);
 }
 fn stop()
 {

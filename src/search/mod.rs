@@ -4,7 +4,7 @@ pub mod node;
 
 use position::mov::{Move};
 use position::Position;
-use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY};
+use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY, VALUE_PAWN};
 use std::time::SystemTime;
 use search::transposition_table::TranspositionTable;
 use search::node::{Node, NORMAL_NODE, PV_NODE, ROOT_NODE};
@@ -55,12 +55,12 @@ impl Searcher
 
         if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
         {
-            let current_score = orig_position.evaluate();
-            if current_score > alpha && depth <= 8
+            let current_score = orig_position.evaluate() - VALUE_PAWN;
+            if current_score > alpha
             {
                 alpha = current_score;
             }
-            if current_score >= beta && depth <= 8
+            if current_score >= beta
             {
                 return current_score;
             }
