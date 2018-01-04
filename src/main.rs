@@ -8,8 +8,7 @@ use search::Searcher;
 use search::perft;
 use position::{Position, piece};
 use position::mov::Move;
-use position::piece::{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE};
-use search::transposition_table::TranspositionTable;
+use position::piece::{PAWN, NO_PIECE};
 
 use std::io;
 use std::io::prelude::*;
@@ -74,7 +73,6 @@ fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace)
 fn get_move(m: &String, position: &Position) -> Move
 {
     let us = position.us;
-    let enemy = position.enemy;
     let mut new_move = Move::empty_move();
     new_move.from = chess_data::get_field_index(&m[0..2]);
     new_move.to = chess_data::get_field_index(&m[2..4]);
@@ -130,14 +128,12 @@ fn get_move(m: &String, position: &Position) -> Move
         new_move.en_passant_castling &= !(chess_data::CASTLING_KINGSIDE_ROOK_FROM[us] | chess_data::CASTLING_KING_FROM[us]);
         new_move.castled = true;
     }
+    new_move.en_passant_castling &= !(chess_data::BIT_AT_INDEX[new_move.from] & (chess_data::RANKS[0] | chess_data::RANKS[7]));
+    new_move.en_passant_castling &= !(chess_data::BIT_AT_INDEX[new_move.to] & (chess_data::RANKS[0] | chess_data::RANKS[7]));
     new_move.zobrist_key = position.get_updated_zobristkey(&new_move);
-    if m=="d7d6"
-    {
-        println!("{}", new_move.get_data_string());
-    }
     new_move
 }
-fn go( position: &Position, params: std::str::SplitWhitespace)
+fn go( position: &Position, _params: std::str::SplitWhitespace)
 {
     Searcher::go(&position, 13);
 }

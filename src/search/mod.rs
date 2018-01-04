@@ -4,7 +4,7 @@ pub mod node;
 
 use position::mov::{Move};
 use position::Position;
-use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY, VALUE_PAWN};
+use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY};
 use std::time::SystemTime;
 use search::transposition_table::TranspositionTable;
 use search::node::{Node, NORMAL_NODE, PV_NODE, ROOT_NODE};
@@ -201,7 +201,7 @@ impl Searcher
             print!("depth {} ", i);
             print!("time {} ", time*1000.0);
             print!("nodes {} ", searcher.nodes_count);
-            print!("nps {} ", searcher.nodes_count as f32 / time);
+            print!("nps {} ", (searcher.nodes_count as f32 / time) as u64);
             if score >= SCORE_MATE
             {
                 print!("score mate {}", (-score + SCORE_MATE + i as Score + 1)/2);
