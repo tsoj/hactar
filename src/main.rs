@@ -70,7 +70,6 @@ fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace)
         },
         _x => println!("Unknown parameter: {}", parameter)
     }
-
 }
 fn get_move(m: &String, position: &Position) -> Move
 {
@@ -78,7 +77,6 @@ fn get_move(m: &String, position: &Position) -> Move
     let enemy = position.enemy;
     let mut new_move = Move::empty_move();
     new_move.from = chess_data::get_field_index(&m[0..2]);
-    new_move.to = chess_data::get_field_index(&m[2..4]);
     new_move.to = chess_data::get_field_index(&m[2..4]);
     if m.len()==5
     {
@@ -107,7 +105,7 @@ fn get_move(m: &String, position: &Position) -> Move
     if
         new_move.moved == PAWN &&
         chess_data::BIT_AT_INDEX[new_move.from] & chess_data::PAWN_HOME_RANK[us] != 0 &&
-        chess_data::BIT_AT_INDEX[new_move.to] != (chess_data::PAWN_QUIET_ATTACK_TABLE[us][new_move.from] | chess_data::PAWN_CAPTURE_ATTACK_TABLE[us][new_move.from])
+        chess_data::BIT_AT_INDEX[new_move.to] & (chess_data::PAWN_QUIET_ATTACK_TABLE[us][new_move.from] | chess_data::PAWN_CAPTURE_ATTACK_TABLE[us][new_move.from]) == 0
     {
         new_move.en_passant_castling |= chess_data::PAWN_QUIET_ATTACK_TABLE[us][new_move.from];
     }
@@ -133,6 +131,10 @@ fn get_move(m: &String, position: &Position) -> Move
         new_move.castled = true;
     }
     new_move.zobrist_key = position.get_updated_zobristkey(&new_move);
+    if m=="d7d6"
+    {
+        println!("{}", new_move.get_data_string());
+    }
     new_move
 }
 fn go( position: &Position, params: std::str::SplitWhitespace)
@@ -146,20 +148,30 @@ fn print(position: &Position)
 {
     println!("{}",position.get_chess_board_string());
 }
+fn print_debug(position: &Position)
+{
+    println!("{}",position.get_data_string());
+}
 
 fn main()
 {
-    /*
+
     println!("STARTED!");
     perft::test_perft();
-*/
+
     let mut position = Position::empty_position();
     let stdin = io::stdin();
     for line in stdin.lock().lines()
     {
+        //TODO: dont crash without command and enter...
         let line = line.unwrap_or("".into());
         let mut params = line.split_whitespace();
-        let command = params.next().unwrap();
+        let command;
+        match params.next()
+        {
+            Some(x) => command = x,
+            None => continue
+        }
         match command
         {
             "uci" => uci(),
@@ -169,6 +181,7 @@ fn main()
             "stop" => stop(),
             "quit" => { stop(); return },
             "print" => print(&position),
+            "printdebug" => print_debug(&position),
             _x => println!("Unknown command: {}", command)
         }
     }

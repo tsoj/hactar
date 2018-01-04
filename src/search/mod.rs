@@ -212,7 +212,7 @@ impl Searcher
             }
             else
             {
-                print!("score cp {}", score as f32 / VALUE_PAWN as f32);
+                print!("score cp {}", score);
             }
             print!(" pv ");
             for i in 0..searcher.pv.len()

@@ -63,7 +63,6 @@ pub struct Position
     pub zobrist_key: u64,
     pub us: Player,
     pub enemy: Player,
-    pub last_move: Move,
     pub fullmoves_played: u32,
     pub halfmove_clock: u32
 }
@@ -79,8 +78,6 @@ impl Position
             zobrist_key: 0,
             us: NO_PLAYER,
             enemy: NO_PLAYER,
-            last_move:
-            Move::empty_move(),
             fullmoves_played: 0,
             halfmove_clock: 0
         }
@@ -185,8 +182,7 @@ impl Position
         ret += &self.halfmove_clock.to_string()[..];
         ret += "\nZOBRIST KEY: ";
         ret += &format!("{:x}", self.zobrist_key)[..];
-        ret += &self.last_move.get_data_string()[..];
-        ret += "CASTLING / EN PASSANT\n";
+        ret += "\nCASTLING / EN PASSANT\n";
         ret += &get_bitboard_string(self.en_passant_castling)[..];
         ret += "WHITE:\n";
         ret += &get_bitboard_string(self.players[WHITE])[..];
