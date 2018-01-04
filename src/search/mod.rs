@@ -5,9 +5,12 @@ pub mod node;
 use position::mov::{Move};
 use position::Position;
 use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY, VALUE_PAWN};
-use std::time::SystemTime;
 use search::transposition_table::TranspositionTable;
-use search::node::{Node, NORMAL_NODE, PV_NODE, ROOT_NODE};
+use search::node::{Node, NORMAL_NODE, ROOT_NODE};
+
+use std::time::SystemTime;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub type Depth = usize;
 pub const MAX_DEPTH: Depth = 64;
@@ -31,9 +34,14 @@ impl Searcher
         depth: Depth,
         mut alpha: Score,
         beta: Score,
-        pv: &mut PV
+        pv: &mut PV,
+        should_stop: &Arc<AtomicBool>
     ) -> Score
     {
+        if should_stop.load(Ordering::Relaxed)
+        {
+            return 0;
+        }
         self.nodes_count += 1;
         match self.transposition_table.get_score(orig_position.zobrist_key, depth)
         {
@@ -53,7 +61,7 @@ impl Searcher
             None => Move::empty_move()
         };
 
-        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
+        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && node_type != ROOT_NODE && depth <= 5
         {
             let current_score = orig_position.evaluate() - VALUE_PAWN;
             if current_score > alpha
@@ -79,12 +87,13 @@ impl Searcher
             number_legal_moves += 1;
             let mut candidate_pv = Vec::new();
             current_score = -self.nega_max(
-                if i == 0{ PV_NODE }else{ NORMAL_NODE },
+                NORMAL_NODE,
                 &new_position,
                 depth -1,
                 -beta,
                 -alpha,
-                &mut candidate_pv
+                &mut candidate_pv,
+                &should_stop
             );
             self.transposition_table.add(move_list[i].zobrist_key, -current_score, depth -1);
             if current_score > alpha
@@ -167,7 +176,7 @@ impl Searcher
         }
         alpha
     }
-    pub fn go(orig_position: &Position, depth: Depth) -> Move
+    pub fn go(orig_position: Position, depth: Depth, should_stop: Arc<AtomicBool>) -> Move
     {
         let mut searcher = Searcher
         {
@@ -176,52 +185,57 @@ impl Searcher
             pv: Vec::new(),
             best_move: Move::empty_move()
         };
+        let mut best_move = Move::empty_move();
 
         for i in 1..(depth+1)
         {
             let now = SystemTime::now();
             searcher.nodes_count = 0;
             let mut pv = Vec::new();
-            let score = searcher.nega_max(ROOT_NODE, &orig_position, i, -SCORE_INFINITY, SCORE_INFINITY, &mut pv);
-            searcher.pv = pv;
-            let time;
-            match now.elapsed()
+            let score = searcher.nega_max(ROOT_NODE, &orig_position, i, -SCORE_INFINITY, SCORE_INFINITY, &mut pv, &should_stop);
+            if should_stop.load(Ordering::Relaxed) == false
             {
-                Ok(elapsed) =>
+                best_move = searcher.best_move;
+                searcher.pv = pv;
+                let time;
+                match now.elapsed()
                 {
-                    time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f32>().unwrap();
+                    Ok(elapsed) =>
+                    {
+                        time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f32>().unwrap();
+                    }
+                    Err(e) =>
+                    {
+                        println!("Error: {:?}", e);
+                        panic!();
+                    }
                 }
-                Err(e) =>
+                print!("info ");
+                print!("depth {} ", i);
+                print!("time {} ", time*1000.0);
+                print!("nodes {} ", searcher.nodes_count);
+                print!("nps {} ", (searcher.nodes_count as f32 / time) as u64);
+                if score >= SCORE_MATE
                 {
-                    println!("Error: {:?}", e);
-                    panic!();
+                    print!("score mate {}", (-score + SCORE_MATE + i as Score + 1)/2);
                 }
+                else if score <= -SCORE_MATE
+                {
+                    print!("score mate {}", -(score + SCORE_MATE + i as Score + 1)/2);
+                }
+                else
+                {
+                    print!("score cp {}", score);
+                }
+                print!(" pv ");
+                for i in 0..searcher.pv.len()
+                {
+                    print!("{} ", searcher.pv[searcher.pv.len()-1 - i].get_move_notation());
+                }
+                println!();
             }
-            print!("info ");
-            print!("depth {} ", i);
-            print!("time {} ", time*1000.0);
-            print!("nodes {} ", searcher.nodes_count);
-            print!("nps {} ", (searcher.nodes_count as f32 / time) as u64);
-            if score >= SCORE_MATE
-            {
-                print!("score mate {}", (-score + SCORE_MATE + i as Score + 1)/2);
-            }
-            else if score <= -SCORE_MATE
-            {
-                print!("score mate {}", -(score + SCORE_MATE + i as Score + 1)/2);
-            }
-            else
-            {
-                print!("score cp {}", score);
-            }
-            print!(" pv ");
-            for i in 0..searcher.pv.len()
-            {
-                print!("{} ", searcher.pv[searcher.pv.len()-1 - i].get_move_notation());
-            }
-            println!();
         }
-        println!("bestmove {}", searcher.best_move.get_move_notation());
-        searcher.best_move
+        println!("bestmove {}", best_move.get_move_notation());
+        best_move
     }
 }

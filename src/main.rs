@@ -13,6 +13,10 @@ use position::piece::{PAWN, NO_PIECE};
 
 use std::io;
 use std::io::prelude::*;
+use std::thread;
+use std::time::SystemTime;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 const CHESS_ENGINE_NAME: &'static str = "hactar";
 const CHESS_ENGINE_AUTHOR: &'static str = "Tsoj Tsoj";
@@ -134,19 +138,91 @@ fn get_move(m: &String, position: &Position) -> Move
     new_move.zobrist_key = position.get_updated_zobristkey(&new_move);
     new_move
 }
-fn go( position: &Position, mut params: std::str::SplitWhitespace)
+fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut Arc<AtomicBool>)
 {
-    let mut depth = 10;
-    match params.next()
+    #![allow(unused_variables)]
+    #![allow(unused_assignments)]
+    let mut depth = search::MAX_DEPTH;
+    let mut wtime: Option<usize> = None;
+	let mut btime: Option<usize> = None;
+	let mut winc: Option<usize> = None;
+	let mut binc: Option<usize> = None;
+	let mut movestogo: Option<usize> = None;
+    let mut movetime: Option<usize> = None;
+    let mut nodes: Option<usize> = None;
+    let mut parameter_type: Option<&str> = None;
+    for parameter in params
     {
-        Some("depth") => depth = params.next().unwrap().parse::<Depth>().unwrap(),
-        Some(x) => println!("Unknown parameter: {}", x),
+        match parameter_type
+        {
+            Some(x) =>
+            {
+                match x
+                {
+                    "depth" => depth = parameter.parse::<Depth>().unwrap(),
+                    "wtime" => wtime = Some(parameter.parse::<usize>().unwrap()),
+                    "btime" => btime = Some(parameter.parse::<usize>().unwrap()),
+                    "winc" => winc = Some(parameter.parse::<usize>().unwrap()),
+                    "binc" => binc = Some(parameter.parse::<usize>().unwrap()),
+                    "movestogo" => movestogo = Some(parameter.parse::<usize>().unwrap()),
+                    "movetime" => movetime = Some(parameter.parse::<usize>().unwrap()),
+                    "nodes" => nodes = Some(parameter.parse::<usize>().unwrap()),
+                    _x => println!("Unknown parameter: {}", _x)
+                }
+            },
+            None =>
+            {
+                parameter_type = Some(parameter);
+            }
+        }
+    }
+    #[warn(unused_variables)]
+    #[warn(unused_assignments)]
+
+    should_stop.store(false, Ordering::Relaxed);
+    let mut time_limit: Option<usize> = None;
+    match movetime
+    {
+        Some(x) => time_limit = Some(x),
         None => {}
     }
-    Searcher::go(&position, depth);
+    match time_limit
+    {
+        Some(x) =>
+        {
+            let temp_should_stop = Arc::clone(&should_stop);
+            thread::spawn(move || { stop_in(x, temp_should_stop) });
+        },
+        None => {}
+    }
+    let temp_position = position.clone();
+    let temp_should_stop = Arc::clone(&should_stop);
+    thread::spawn(move || { Searcher::go(temp_position, depth, temp_should_stop) });
 }
-fn stop()
+fn stop_in(miliseconds: usize, should_stop: Arc<AtomicBool>)
 {
+    let now = SystemTime::now();
+    let mut time = 0;
+    while time <= miliseconds && should_stop.load(Ordering::Relaxed) == false
+    {
+        match now.elapsed()
+        {
+            Ok(elapsed) =>
+            {
+                time = ((format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos())).parse::<f32>().unwrap()*1000.0) as usize;
+            }
+            Err(e) =>
+            {
+                println!("Error: {:?}", e);
+                panic!();
+            }
+        }
+    }
+    should_stop.store(true, Ordering::Relaxed);
+}
+fn stop(should_stop: &mut Arc<AtomicBool>)
+{
+    should_stop.store(true, Ordering::Relaxed);
 }
 fn print(position: &Position)
 {
@@ -163,6 +239,7 @@ fn main()
     println!("STARTED!");
     perft::test_perft();
 
+    let mut should_stop = Arc::new(AtomicBool::new(true));
     let mut position = Position::empty_position();
     let stdin = io::stdin();
     for line in stdin.lock().lines()
@@ -181,9 +258,9 @@ fn main()
             "uci" => uci(),
             "isready" => println!("readyok"),
             "position" => set_position(&mut position, params),
-            "go" => go(&position, params),
-            "stop" => stop(),
-            "quit" => { stop(); return },
+            "go" => go(&position, params, &mut should_stop),
+            "stop" => stop(&mut should_stop),
+            "quit" => { stop(&mut should_stop); return },
             "print" => print(&position),
             "printdebug" => print_debug(&position),
             _x => println!("Unknown command: {}", command)
