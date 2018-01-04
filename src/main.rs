@@ -9,6 +9,7 @@ use search::perft;
 use position::{Position, piece};
 use position::mov::Move;
 use position::piece::{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE};
+use search::transposition_table::TranspositionTable;
 
 use std::io;
 use std::io::prelude::*;
@@ -21,6 +22,7 @@ fn uci()
 {
     println!("id name {}", CHESS_ENGINE_NAME);
     println!("id author {}", CHESS_ENGINE_AUTHOR);
+    println!("uciok");
 }
 fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace)
 {
@@ -50,18 +52,23 @@ fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace)
         },
         _x => println!("Unknown parameter: {}", parameter)
     }
-    let parameter = params.next().unwrap();
-    if parameter == "moves"
+    let parameter;
+    match params.next()
     {
-        for m in params
-        {
-            let new_move = &get_move(&m.to_string(), &position);
-            position.make_move(&new_move);
-        }
+        Some(x) => parameter = x,
+        None => return
     }
-    else
+    match parameter
     {
-        println!("Unknown parameter: {}", parameter);
+        "moves" =>
+        {
+            for m in params
+            {
+                let new_move = &get_move(&m.to_string(), &position);
+                position.make_move(&new_move);
+            }
+        },
+        _x => println!("Unknown parameter: {}", parameter)
     }
 
 }
@@ -128,8 +135,9 @@ fn get_move(m: &String, position: &Position) -> Move
     new_move.zobrist_key = position.get_updated_zobristkey(&new_move);
     new_move
 }
-fn go(position: &Position, params: std::str::SplitWhitespace)
+fn go( position: &Position, params: std::str::SplitWhitespace)
 {
+    Searcher::go(&position, 13);
 }
 fn stop()
 {
@@ -141,11 +149,11 @@ fn print(position: &Position)
 
 fn main()
 {
+    /*
     println!("STARTED!");
     perft::test_perft();
-
+*/
     let mut position = Position::empty_position();
-
     let stdin = io::stdin();
     for line in stdin.lock().lines()
     {
@@ -164,8 +172,8 @@ fn main()
             _x => println!("Unknown command: {}", command)
         }
     }
-    /*
-    let mut p = Position::empty_position();
+
+    /*let mut p = Position::empty_position();
     p.set_from_fen(&"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0".to_string());
     //p.set_from_fen(&"2r1r3/pp1k2pp/8/3b4/4P3/4K3/PP4PP/R5R1 w - - 0 26".to_string());
     //p.set_from_fen(&"5r1k/1p1b1p1p/p2ppb2/5P1B/1q6/1Pr3R1/2PQ2PP/5R1K w - - 0 1".to_string());//CHECKMATE in 4
@@ -175,6 +183,5 @@ fn main()
     println!("{}", p.get_chess_board_string());
     let m = Searcher::go(&p, search::MAX_DEPTH);
     p.make_move(&m);
-    println!("{}", p.get_chess_board_string());
-    */
+    println!("{}", p.get_chess_board_string());*/
 }

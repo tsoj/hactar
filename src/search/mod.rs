@@ -17,10 +17,10 @@ const MAX_NUM_CHECKS_IN_QUIESCE: u8 = 2;
 
 pub struct Searcher
 {
-    transposition_table: TranspositionTable,
-    best_move: Move,
-    nodes_count: u64,
-    pv: PV
+    pub transposition_table: TranspositionTable,
+    pub best_move: Move,
+    pub nodes_count: u64,
+    pub pv: PV,
 }
 impl Searcher
 {
@@ -35,7 +35,6 @@ impl Searcher
     ) -> Score
     {
         self.nodes_count += 1;
-
         match self.transposition_table.get_score(orig_position.zobrist_key, depth)
         {
             Some(x) => return x,
@@ -54,10 +53,14 @@ impl Searcher
             None => Move::empty_move()
         };
 
-        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && depth <= /*6 or */5/* or 4 or 3*/
+        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
         {
             let current_score = orig_position.evaluate();
-            if current_score >= beta
+            if current_score > alpha && depth <= 2
+            {
+                alpha = current_score;
+            }
+            if current_score >= beta && depth <= /*6 or */5/* or 4 or 3 or 2*/
             {
                 return current_score;
             }
@@ -166,14 +169,13 @@ impl Searcher
     }
     pub fn go(orig_position: &Position, depth: Depth) -> Move
     {
-        let mut searcher =
-        Searcher
-            {
-                transposition_table: TranspositionTable::get_empty_transposition_table(100_000_000),
-                best_move: Move::empty_move(),
-                nodes_count: 0,
-                pv: Vec::new()
-            };
+        let mut searcher = Searcher
+        {
+            transposition_table: TranspositionTable::empty_transposition_table(100_000_000),
+            nodes_count: 0,
+            pv: Vec::new(),
+            best_move: Move::empty_move()
+        };
 
         for i in 1..(depth+1)
         {
@@ -218,7 +220,6 @@ impl Searcher
                 print!("{} ", searcher.pv[searcher.pv.len()-1 - i].get_move_notation());
             }
             println!();
-
         }
         println!("bestmove {}", searcher.best_move.get_move_notation());
         searcher.best_move

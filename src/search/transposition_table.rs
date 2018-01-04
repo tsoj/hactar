@@ -60,7 +60,7 @@ impl TranspositionTable
         let t_index = (zobrist_key % (self.a.len() as u64)) as usize;
         self[t_index].failed_high = true;
     }
-    pub fn get_empty_transposition_table(size: usize) -> TranspositionTable
+    pub fn empty_transposition_table(size: usize) -> TranspositionTable
     {
         TranspositionTable{a: vec![TranspositionTableEntry{zobrist_key: 0, score: VALUE_NO_PIECE, depth: MAX_DEPTH + 1, failed_high: false}; size]}
     }
