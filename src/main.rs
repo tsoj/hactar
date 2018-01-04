@@ -135,7 +135,7 @@ fn get_move(m: &String, position: &Position) -> Move
 }
 fn go( position: &Position, _params: std::str::SplitWhitespace)
 {
-    Searcher::go(&position, 13);
+    Searcher::go(&position, 15);
 }
 fn stop()
 {

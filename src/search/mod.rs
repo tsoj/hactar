@@ -56,11 +56,11 @@ impl Searcher
         if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
         {
             let current_score = orig_position.evaluate();
-            if current_score > alpha && depth <= 2
+            if current_score > alpha && depth <= 8
             {
                 alpha = current_score;
             }
-            if current_score >= beta && depth <= /*6 or */5/* or 4 or 3 or 2*/
+            if current_score >= beta && depth <= 8
             {
                 return current_score;
             }
