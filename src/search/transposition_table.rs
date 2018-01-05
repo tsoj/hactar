@@ -1,6 +1,9 @@
 use evaluation::score::{Score, VALUE_NO_PIECE};
 use search::{Depth, MAX_DEPTH};
+use position::mov::Move;
+
 use std::ops::{Index,IndexMut};
+
 
 #[derive(Copy, Clone)]
 pub struct TranspositionTableEntry
@@ -8,7 +11,9 @@ pub struct TranspositionTableEntry
     zobrist_key: u64,
     score: Score,
     depth: Depth,
-    failed_high: bool
+    failed_high: bool,
+    move_from: usize,
+    move_to: usize
 }
 
 pub struct TranspositionTable
@@ -30,18 +35,20 @@ impl IndexMut<usize> for TranspositionTable
 }
 impl TranspositionTable
 {
-    pub fn add(&mut self, zobrist_key: u64, current_score: Score, depth: Depth)
+    pub fn add(&mut self, zobrist_key: u64, current_score: Score, depth: Depth, m: &Move)
     {
         let t_index = (zobrist_key % (self.a.len() as u64)) as usize;
         self[t_index].depth = depth;
         self[t_index].score = current_score;
         self[t_index].zobrist_key = zobrist_key;
         self[t_index].failed_high = false;
+        self[t_index].move_to = m.to;
+        self[t_index].move_from = m.from;
     }
-    pub fn get_score(&self, zobrist_key: u64, min_depth: Depth) -> Option<Score>
+    pub fn get_score(&self, zobrist_key: u64, min_depth: Depth, m: &Move) -> Option<Score>
     {
         let t_index = (zobrist_key % (self.a.len() as u64)) as usize;
-        if self[t_index].zobrist_key == zobrist_key && self[t_index].depth >= min_depth
+        if self[t_index].zobrist_key == zobrist_key && self[t_index].depth >= min_depth && self[t_index].move_from == m.from && self[t_index].move_to == m.to
         {
             Some(self[t_index].score)
         }
@@ -62,6 +69,6 @@ impl TranspositionTable
     }
     pub fn empty_transposition_table(size: usize) -> TranspositionTable
     {
-        TranspositionTable{a: vec![TranspositionTableEntry{zobrist_key: 0, score: VALUE_NO_PIECE, depth: MAX_DEPTH + 1, failed_high: false}; size]}
+        TranspositionTable{a: vec![TranspositionTableEntry{zobrist_key: 0, score: VALUE_NO_PIECE, depth: MAX_DEPTH + 1, failed_high: false, move_from: 0, move_to: 0}; size]}
     }
 }

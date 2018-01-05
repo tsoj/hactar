@@ -4,7 +4,7 @@ pub mod node;
 
 use position::mov::{Move};
 use position::Position;
-use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY, VALUE_PAWN};
+use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY};//, VALUE_PAWN};
 use search::transposition_table::TranspositionTable;
 use search::node::{Node, NORMAL_NODE, ROOT_NODE};
 
@@ -43,17 +43,10 @@ impl Searcher
             return 0;
         }
         self.nodes_count += 1;
-        match self.transposition_table.get_score(orig_position.zobrist_key, depth)
-        {
-            Some(x) => return x,
-            None => {}
-        }
         if depth==0
         {
             return self.quiesce(orig_position, alpha, beta, pv, 0);
         }
-        let mut current_score: Score;
-        let mut number_legal_moves = 0;
 
         let pv_move = match self.pv.pop()
         {
@@ -61,9 +54,10 @@ impl Searcher
             None => Move::empty_move()
         };
 
+        let mut current_score: Score;
         if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && node_type != ROOT_NODE && depth <= 5
         {
-            let current_score = orig_position.evaluate() - VALUE_PAWN;
+            let current_score = orig_position.evaluate();// - VALUE_PAWN;
             if current_score > alpha
             {
                 alpha = current_score;
@@ -76,6 +70,7 @@ impl Searcher
 
         let mut move_list = orig_position.generate_move_list();
         move_list.sort_moves(&self.transposition_table, &pv_move);
+        let mut number_legal_moves = 0;
         for i in 0..move_list.len
         {
             let mut new_position = orig_position.clone();
@@ -95,7 +90,11 @@ impl Searcher
                 &mut candidate_pv,
                 &should_stop
             );
-            self.transposition_table.add(move_list[i].zobrist_key, -current_score, depth -1);
+            match self.transposition_table.get_score(orig_position.zobrist_key, depth -1, &move_list[i])
+            {
+                Some(x) => return x,
+                None => self.transposition_table.add(move_list[i].zobrist_key, -current_score, depth -1, &move_list[i])
+            }
             if current_score > alpha
             {
                 alpha = current_score;
@@ -140,10 +139,10 @@ impl Searcher
         if stand_pat > alpha && (!orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) || number_checks > MAX_NUM_CHECKS_IN_QUIESCE)
         {
             alpha = stand_pat;
-            if stand_pat >= beta
-            {
-                return beta;
-            }
+        }
+        if stand_pat >= beta
+        {
+            return beta;
         }
         else
         {
@@ -233,6 +232,10 @@ impl Searcher
                     print!("{} ", searcher.pv[searcher.pv.len()-1 - i].get_move_notation());
                 }
                 println!();
+                if score >= SCORE_MATE || score <= -SCORE_MATE
+                {
+                    break;
+                }
             }
         }
         println!("bestmove {}", best_move.get_move_notation());
