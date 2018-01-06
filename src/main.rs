@@ -232,6 +232,10 @@ fn print_debug(position: &Position)
 {
     println!("{}",position.get_data_string());
 }
+fn eval(position: &Position)
+{
+    println!("{}",position.evaluate());
+}
 
 fn main()
 {
@@ -259,6 +263,7 @@ fn main()
             "isready" => println!("readyok"),
             "position" => set_position(&mut position, params),
             "go" => go(&position, params, &mut should_stop),
+            "eval" => eval(&position),
             "stop" => stop(&mut should_stop),
             "quit" => { stop(&mut should_stop); return },
             "print" => print(&position),

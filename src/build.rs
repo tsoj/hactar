@@ -598,6 +598,7 @@ fn main() {
         }
     }
     write_string_to_file("./src/chess_data_in/pawn_capture_attack_table.in", &write_2_64_array_to_string(&pawn_capture_attack_table));
+
     let mut pawn_quiet_attack_table: [[u64; 64]; 2] = [[0; 64]; 2];
     for i in 0..64
     {
@@ -613,6 +614,33 @@ fn main() {
         }
     }
     write_string_to_file("./src/chess_data_in/pawn_quiet_attack_table.in", &write_2_64_array_to_string(&pawn_quiet_attack_table));
+
+    let mut is_passed: [[u64; 64]; 2] = [[0; 64]; 2];
+    for i in 0..64
+    {
+        is_passed[0][i] |= files_64[i];
+        if i % 8 != 0
+        {
+            is_passed[0][i] |= files_64[i - 1];
+        }
+        if i % 8 != 7
+        {
+            is_passed[0][i] |= files_64[i + 1];
+        }
+        is_passed[1][i] = is_passed[0][i];
+
+        //WHITE
+        for j in 0..((i/8)+1)
+        {
+            is_passed[0][i] &= !ranks[j];
+        }
+        //BLACK
+        for j in (i/8)..8
+        {
+            is_passed[1][i] &= !ranks[j];
+        }
+    }
+    write_string_to_file("./src/chess_data_in/is_passed.in", &write_2_64_array_to_string(&is_passed));
     //panic!();
 }
 

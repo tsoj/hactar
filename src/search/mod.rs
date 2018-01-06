@@ -1,44 +1,43 @@
-pub mod transposition_table;
 pub mod perft;
-pub mod node;
+pub mod node_type;
 
 use position::mov::{Move};
 use position::Position;
-use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY};//, VALUE_PAWN};
-use search::transposition_table::TranspositionTable;
-use search::node::{Node, NORMAL_NODE, ROOT_NODE};
+use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY};
+use search::node_type::{NodeType, NORMAL_NODE, ROOT_NODE};
 
 use std::time::SystemTime;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-pub type Depth = usize;
+pub type Depth = u8;
 pub const MAX_DEPTH: Depth = 64;
 pub type PV = Vec<Move>;
 
-const MAX_NUM_CHECKS_IN_QUIESCE: u8 = 2;
+const MAX_NUM_CHECKS_EXTENSIONS_IN_QUIESCE: u8 = 2;
+const MAX_NUM_CHECKS_EXTENSIONS: u8 = 4;
 
 pub struct Searcher
 {
-    pub transposition_table: TranspositionTable,
     pub best_move: Move,
     pub nodes_count: u64,
     pub pv: PV,
+    pub should_stop: Arc<AtomicBool>
 }
 impl Searcher
 {
     fn nega_max(
         &mut self,
-        node_type: Node,
+        node_type: NodeType,
         orig_position: &Position,
-        depth: Depth,
+        mut depth: Depth,
         mut alpha: Score,
         beta: Score,
         pv: &mut PV,
-        should_stop: &Arc<AtomicBool>
+        mut checks_extensions: u8
     ) -> Score
     {
-        if should_stop.load(Ordering::Relaxed)
+        if self.should_stop.load(Ordering::Relaxed)
         {
             return 0;
         }
@@ -48,28 +47,16 @@ impl Searcher
             return self.quiesce(orig_position, alpha, beta, pv, 0);
         }
 
-        let pv_move = match self.pv.pop()
+        let in_check = orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy);
+        if in_check && checks_extensions < MAX_NUM_CHECKS_EXTENSIONS
         {
-            Some(x) => x,
-            None => Move::empty_move()
-        };
-
-        let mut current_score: Score;
-        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && node_type != ROOT_NODE && depth <= 5
-        {
-            let current_score = orig_position.evaluate();// - VALUE_PAWN;
-            if current_score > alpha
-            {
-                alpha = current_score;
-            }
-            if current_score >= beta
-            {
-                return current_score;
-            }
+            depth += 1;
+            checks_extensions += 1;
         }
 
+        let mut current_score;
         let mut move_list = orig_position.generate_move_list();
-        move_list.sort_moves(&self.transposition_table, &pv_move);
+        move_list.sort_moves();
         let mut number_legal_moves = 0;
         for i in 0..move_list.len
         {
@@ -88,13 +75,8 @@ impl Searcher
                 -beta,
                 -alpha,
                 &mut candidate_pv,
-                &should_stop
+                checks_extensions
             );
-            match self.transposition_table.get_score(orig_position.zobrist_key, depth -1, &move_list[i])
-            {
-                Some(x) => return x,
-                None => self.transposition_table.add(move_list[i].zobrist_key, -current_score, depth -1, &move_list[i])
-            }
             if current_score > alpha
             {
                 alpha = current_score;
@@ -106,7 +88,6 @@ impl Searcher
                 pv.push(move_list[i]);
                 if current_score >= beta
                 {
-                    self.transposition_table.set_failed_high(move_list[i].zobrist_key);
                     break;
                 }
             }
@@ -131,12 +112,13 @@ impl Searcher
         mut alpha: Score,
         beta: Score,
         pv: &mut PV,
-        mut number_checks: u8
+        mut check_extensions: u8
     ) -> Score
     {
         self.nodes_count += 1;
+        let in_check = orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy);
         let stand_pat = orig_position.evaluate();
-        if stand_pat > alpha && (!orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) || number_checks > MAX_NUM_CHECKS_IN_QUIESCE)
+        if stand_pat > alpha && (!in_check || check_extensions > MAX_NUM_CHECKS_EXTENSIONS_IN_QUIESCE)
         {
             alpha = stand_pat;
         }
@@ -144,13 +126,13 @@ impl Searcher
         {
             return beta;
         }
-        else
+        if in_check
         {
-            number_checks += 1;
+            check_extensions += 1;
         }
         let mut current_score: Score;
         let mut move_list = orig_position.generate_capture_move_list();
-        move_list.sort_moves_quiesce();
+        move_list.sort_moves();
         for i in 0..move_list.len
         {
             let mut new_position = orig_position.clone();
@@ -160,7 +142,7 @@ impl Searcher
                 continue;
             }
             let mut candidate_pv = Vec::new();
-            current_score = -self.quiesce(&new_position, -beta, -alpha, &mut candidate_pv, number_checks);
+            current_score = -self.quiesce(&new_position, -beta, -alpha, &mut candidate_pv, check_extensions);
 
             if current_score > alpha
             {
@@ -179,66 +161,52 @@ impl Searcher
     {
         let mut searcher = Searcher
         {
-            transposition_table: TranspositionTable::empty_transposition_table(100_000_000),
             nodes_count: 0,
             pv: Vec::new(),
-            best_move: Move::empty_move()
+            best_move: Move::empty_move(),
+            should_stop: should_stop
         };
-        let mut best_move = Move::empty_move();
-
-        for i in 1..(depth+1)
+        let now = SystemTime::now();
+        let mut pv = Vec::new();
+        let score = searcher.nega_max(ROOT_NODE, &orig_position, depth, -SCORE_INFINITY, SCORE_INFINITY, &mut pv, 0);
+        searcher.pv = pv;
+        let time;
+        match now.elapsed()
         {
-            let now = SystemTime::now();
-            searcher.nodes_count = 0;
-            let mut pv = Vec::new();
-            let score = searcher.nega_max(ROOT_NODE, &orig_position, i, -SCORE_INFINITY, SCORE_INFINITY, &mut pv, &should_stop);
-            if should_stop.load(Ordering::Relaxed) == false
+            Ok(elapsed) =>
             {
-                best_move = searcher.best_move;
-                searcher.pv = pv;
-                let time;
-                match now.elapsed()
-                {
-                    Ok(elapsed) =>
-                    {
-                        time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f32>().unwrap();
-                    }
-                    Err(e) =>
-                    {
-                        println!("Error: {:?}", e);
-                        panic!();
-                    }
-                }
-                print!("info ");
-                print!("depth {} ", i);
-                print!("time {} ", time*1000.0);
-                print!("nodes {} ", searcher.nodes_count);
-                print!("nps {} ", (searcher.nodes_count as f32 / time) as u64);
-                if score >= SCORE_MATE
-                {
-                    print!("score mate {}", (-score + SCORE_MATE + i as Score + 1)/2);
-                }
-                else if score <= -SCORE_MATE
-                {
-                    print!("score mate {}", -(score + SCORE_MATE + i as Score + 1)/2);
-                }
-                else
-                {
-                    print!("score cp {}", score);
-                }
-                print!(" pv ");
-                for i in 0..searcher.pv.len()
-                {
-                    print!("{} ", searcher.pv[searcher.pv.len()-1 - i].get_move_notation());
-                }
-                println!();
-                if score >= SCORE_MATE || score <= -SCORE_MATE
-                {
-                    break;
-                }
+                time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f32>().unwrap();
+            }
+            Err(e) =>
+            {
+                println!("Error: {:?}", e);
+                panic!();
             }
         }
-        println!("bestmove {}", best_move.get_move_notation());
-        best_move
+        print!("info ");
+        print!("depth {} ", depth);
+        print!("time {} ", time*1000.0);
+        print!("nodes {} ", searcher.nodes_count);
+        print!("nps {} ", (searcher.nodes_count as f32 / time) as u64);
+        if score >= SCORE_MATE
+        {
+            print!("score mate {}", (-score + SCORE_MATE + depth as Score + 2)/2);
+        }
+        else if score <= -SCORE_MATE
+        {
+            print!("score mate {}", -(score + SCORE_MATE + depth as Score + 2)/2);
+        }
+        else
+        {
+            print!("score cp {}", score);
+        }
+        print!(" pv ");
+        for i in 0..searcher.pv.len()
+        {
+            print!("{} ", searcher.pv[searcher.pv.len()-1 - i].get_move_notation());
+        }
+        println!();
+        println!("bestmove {}", searcher.best_move.get_move_notation());
+        searcher.best_move
     }
 }

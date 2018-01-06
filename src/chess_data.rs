@@ -64,42 +64,51 @@ const KNIGHT_ATTACK_TABLE: [u64; 64] = include!("./chess_data_in/knight_attack_t
 const KING_ATTACK_TABLE: [u64; 64] = include!("./chess_data_in/king_attack_table.in");
 pub const PAWN_QUIET_ATTACK_TABLE: [[u64; 64]; 2] = include!("./chess_data_in/pawn_quiet_attack_table.in");
 pub const PAWN_CAPTURE_ATTACK_TABLE: [[u64; 64]; 2] = include!("./chess_data_in/pawn_capture_attack_table.in");
+pub const IS_PASSED: [[u64; 64]; 2] = include!("./chess_data_in/is_passed.in");
 pub const HOME_RANK: [u64; 2] = [RANKS[0], RANKS[7]];
 pub const PAWN_HOME_RANK: [u64; 2] = [RANKS[1], RANKS[6]];
+pub const CENTER_7X7: u64 = !0 & !RANKS[0] & !RANKS[7] & !FILES[0] & !FILES[7];
 
 pub const ZOBRIST_RANDOM_BITMASKS_PIECES: [[u64; 64]; 6] = include!("./chess_data_in/zobrist_random_bitmasks_pieces.in");
 pub const ZOBRIST_RANDOM_BITMASKS_PLAYERS: [[u64; 64]; 2] = include!("./chess_data_in/zobrist_random_bitmasks_players.in");
-
+#[inline(always)]
 fn get_hashkey_rank(index: usize, occupancy: u64) -> usize
 {
     (((occupancy >> ((index / 8)*8)) >> 1) & 0b111111) as usize
 }
+#[inline(always)]
 fn get_hashkey_file(index: usize , occupancy: u64) -> usize
 {
     ((((((occupancy >> (index % 8)) & FILES[0] ).wrapping_mul(MAIN_DIAGONAL)) >> 56) >> 1) & 0b111111) as usize
 }
+#[inline(always)]
 fn get_hashkey_diagonal(index: usize, occupancy: u64) -> usize
 {
     (((((occupancy & DIAGONALS_64[index as usize]).wrapping_mul(FILES[0])) >> 56) >> 1) & 0b111111) as usize
 }
+#[inline(always)]
 fn get_hashkey_anti_diagonal(index: usize, occupancy: u64) -> usize
 {
     (((((occupancy & ANTI_DIAGONALS_64[index]).wrapping_mul(FILES[0])) >> 56) >> 1) & 0b111111) as usize
 }
+#[inline(always)]
 pub fn get_attack_mask_knight(index: usize, _occupancy: u64) -> u64
 {
     KNIGHT_ATTACK_TABLE[index]
 }
+#[inline(always)]
 pub fn get_attack_mask_bishop(index: usize, occupancy: u64) -> u64
 {
     ANTI_DIAGONAL_ATTACK_TABLE[index][get_hashkey_anti_diagonal(index, occupancy)] |
     DIAGONAL_ATTACK_TABLE[index][get_hashkey_diagonal(index, occupancy)]
 }
+#[inline(always)]
 pub fn get_attack_mask_rook(index: usize, occupancy: u64) -> u64
 {
     RANK_ATTACK_TABLE[index][get_hashkey_rank(index, occupancy)] |
     FILE_ATTACK_TABLE[index][get_hashkey_file(index, occupancy)]
 }
+#[inline(always)]
 pub fn get_attack_mask_queen(index: usize, occupancy: u64) -> u64
 {
     ANTI_DIAGONAL_ATTACK_TABLE[index][get_hashkey_anti_diagonal(index, occupancy)] |
@@ -107,10 +116,12 @@ pub fn get_attack_mask_queen(index: usize, occupancy: u64) -> u64
     RANK_ATTACK_TABLE[index][get_hashkey_rank(index, occupancy)] |
     FILE_ATTACK_TABLE[index][get_hashkey_file(index, occupancy)]
 }
+#[inline(always)]
 pub fn get_attack_mask_king(index: usize, _occupancy: u64) -> u64
 {
     KING_ATTACK_TABLE[index]
 }
+#[inline(always)]
 pub fn find_and_clear_trailing_one(mask: &mut u64) -> usize
 {
     let ret = mask.trailing_zeros() as usize;

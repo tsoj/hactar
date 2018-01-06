@@ -82,16 +82,19 @@ impl Position
             halfmove_clock: 0
         }
     }
+    #[inline(always)]
     pub fn add_piece(&mut self, player: Player, piece: Piece , field: u64)
     {
         self.pieces[piece] |=  field;
         self.players[player] |=  field;
     }
+    #[inline(always)]
     pub fn remove_piece(&mut self, player: Player, piece: Piece , field: u64)
     {
         self.pieces[piece] &=  !field;
         self.players[player] &=  !field;
     }
+    #[inline(always)]
     pub fn move_piece(&mut self, player: Player, piece: Piece , from: u64,  to: u64)
     {
         self.remove_piece(player, piece, from);
@@ -374,6 +377,7 @@ impl Position
         ret ^= self.us as u64;
         ret
     }
+    #[inline(always)]
     pub fn get_updated_zobristkey(&self, m: &Move) -> u64
     {
         let mut ret: u64 = self.zobrist_key;
@@ -430,6 +434,7 @@ impl Position
         }
         ret
     }
+    #[inline(always)]
     pub fn generate_move_list(&self) -> MoveList
     {
         let mut move_list = MoveList::empty_move_list();
@@ -443,6 +448,7 @@ impl Position
         move_list.generate_piece_moves(&self, KING, get_attack_mask_king, new_en_passant_castling, false);
         move_list
     }
+    #[inline(always)]
     pub fn generate_capture_move_list(&self) -> MoveList
     {
         let mut move_list = MoveList::empty_move_list();
@@ -455,6 +461,7 @@ impl Position
         move_list.generate_piece_moves(&self, KING, get_attack_mask_king, new_en_passant_castling, true);
         move_list
     }
+    #[inline(always)]
     pub fn is_check(&self, us: Player, enemy: Player, kings_index: usize) -> bool
     {
         let occupancy = self.players[WHITE] | self.players[BLACK];
@@ -490,6 +497,7 @@ impl Position
         }
         false
     }
+    #[inline(always)]
     pub fn is_check_unkown_kings_index(&self, us: Player, enemy: Player) -> bool
     {
         let kings_index = (self.pieces[KING] & self.players[us]).trailing_zeros() as usize;
@@ -499,6 +507,7 @@ impl Position
         }
         self.is_check(us, enemy, kings_index)
     }
+    #[inline(always)]
     pub fn make_move(&mut self, m: &Move)
     {
         let enemy = self.enemy;
