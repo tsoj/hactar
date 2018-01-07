@@ -4,9 +4,9 @@ mod position;
 mod search;
 mod evaluation;
 
-use search::Searcher;
+use search::alpha_beta::Searcher;
 use search::perft;
-use search::Depth;
+use search::{Depth, MAX_DEPTH};
 use position::{Position, piece};
 use position::mov::Move;
 use position::piece::{PAWN, NO_PIECE};
@@ -142,7 +142,7 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
 {
     #![allow(unused_variables)]
     #![allow(unused_assignments)]
-    let mut depth = search::MAX_DEPTH;
+    let mut depth = MAX_DEPTH;
     let mut wtime: Option<usize> = None;
 	let mut btime: Option<usize> = None;
 	let mut winc: Option<usize> = None;
