@@ -1,7 +1,7 @@
 # hactar
 __hactar__ is a simple chessengine written in rust.
 
-## TODO
+## todo
 ### perft
 - [x] in/out functions
 - [x] zobrist hashing
@@ -10,9 +10,17 @@ __hactar__ is a simple chessengine written in rust.
 - [x] make-move
 - [x] perft
 
+### uci
+- [x] basic uci framwork
+- [x] mutlithreading for all time input
+- [ ] setoptions for different search types
+
 ### alpha-beta
-- [x] move sorting ---DONE
-- [x] quiescence search ---DONE
+- [x] move sorting
+- [x] quiescence search
+- [ ] iterativ deepening
+- [ ] transposition table
+- [ ] performance improvements
 - [ ] further pruning and extensions
 - [ ] performance improvements
 
@@ -21,6 +29,9 @@ __hactar__ is a simple chessengine written in rust.
 - [ ] monte-carlo tree search as evaluation at leaf nodes of highly parallel min-max search:
   - [ ] on CPU
   - [ ] on GPU
+
+### machine learning / reinforcement learning
+_???_
 
 ## license
 Copyright 2018 Tsoj Tsoj
