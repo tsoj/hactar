@@ -1,6 +1,28 @@
 # hactar
 __hactar__ is a simple chessengine written in rust.
-# license
+
+## TODO
+### perft
+- [x] in/out functions
+- [x] zobrist hashing
+- [x] move generator
+- [ ] move generator performance improvements
+- [x] make-move
+- [x] perft
+
+### alpha-beta
+- [x] move sorting ---DONE
+- [x] quiescence search ---DONE
+- [ ] further pruning and extensions
+- [ ] performance improvements
+
+### monte-carlo
+- [ ] monte-carlo tree search with alpha-beta search instead of rollout
+- [ ] monte-carlo tree search as evaluation at leaf nodes of highly parallel min-max search:
+  - [ ] on CPU
+  - [ ] on GPU
+
+## license
 Copyright 2018 Tsoj Tsoj
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
