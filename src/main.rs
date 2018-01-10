@@ -10,6 +10,8 @@ use search::{Depth, MAX_DEPTH};
 use position::{Position, piece};
 use position::mov::Move;
 use position::piece::{PAWN, NO_PIECE};
+use search::monte_carlo::go_monte_carlo;
+use evaluation::probability::score_to_probability;
 
 use std::io;
 use std::io::prelude::*;
@@ -197,7 +199,7 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
     }
     let temp_position = position.clone();
     let temp_should_stop = Arc::clone(&should_stop);
-    thread::spawn(move || { Searcher::go(temp_position, depth, temp_should_stop) });
+    thread::spawn(move || { go_monte_carlo(temp_position, temp_should_stop) });
 }
 fn stop_in(miliseconds: usize, should_stop: Arc<AtomicBool>)
 {
@@ -234,7 +236,8 @@ fn print_debug(position: &Position)
 }
 fn eval(position: &Position)
 {
-    println!("{}",position.evaluate());
+    println!("score: {}",position.evaluate());
+    println!("winning probability: {}",score_to_probability(position.evaluate()));
 }
 
 fn main()
@@ -282,5 +285,6 @@ fn main()
     println!("{}", p.get_chess_board_string());
     let m = Searcher::go(&p, search::MAX_DEPTH);
     p.make_move(&m);
+    r2q1rk1/pb3ppp/1p6/2bp3n/8/2N1B1P1/PP1QPPBP/R4RK1 b - - 4 15
     println!("{}", p.get_chess_board_string());*/
 }

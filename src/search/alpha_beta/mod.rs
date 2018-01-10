@@ -23,7 +23,7 @@ pub struct Searcher
 }
 impl Searcher
 {
-    fn nega_max(
+    pub fn nega_max(
         &mut self,
         node_type: NodeType,
         orig_position: &Position,

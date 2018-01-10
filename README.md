@@ -25,13 +25,13 @@ __hactar__ is a simple chessengine written in rust.
 - [ ] performance improvements
 
 ### monte-carlo
-- [ ] monte-carlo tree search with alpha-beta search instead of rollout
+- [ ] monte-carlo tree search with shallow alpha-beta search instead of rollout
 - [ ] monte-carlo tree search as evaluation at leaf nodes of highly parallel min-max search:
   - [ ] on CPU
   - [ ] on GPU
 
 ### machine learning / reinforcement learning
-_???_
+_??? or i really don't know anything about it_
 
 ## license
 Copyright 2018 Tsoj Tsoj

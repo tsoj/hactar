@@ -2,6 +2,8 @@
 #![allow(unused_mut)]
 
 pub mod score;
+pub mod probability;
+
 use chess_data::*;
 use position::Position;
 use position::piece::{Piece, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
