@@ -158,9 +158,7 @@ impl MctNode
 fn node_score(wins: Probability, simulations: usize, simulations_parent_node: usize) -> Probability
 {
     let c = 1.5;
-    let pretty_small_value_almost_zero = 0.0000000000000001;
-    (wins / (simulations as Probability + pretty_small_value_almost_zero)) + c*((simulations_parent_node as f64).ln() / simulations as f64).sqrt();
-    1.0 / (simulations as f64)
+    wins + c*((simulations_parent_node as f64).ln() / simulations as f64).sqrt()
 }
 pub fn go_monte_carlo(position: Position, should_stop: Arc<AtomicBool>)
 {
