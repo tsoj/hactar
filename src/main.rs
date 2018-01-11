@@ -199,7 +199,7 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
     }
     let temp_position = position.clone();
     let temp_should_stop = Arc::clone(&should_stop);
-    thread::spawn(move || { go_monte_carlo(temp_position, temp_should_stop) });
+    let child = thread::Builder::new().name("search".to_string()).spawn(move || { go_monte_carlo(temp_position, temp_should_stop) });
 }
 fn stop_in(miliseconds: usize, should_stop: Arc<AtomicBool>)
 {
@@ -286,5 +286,6 @@ fn main()
     let m = Searcher::go(&p, search::MAX_DEPTH);
     p.make_move(&m);
     r2q1rk1/pb3ppp/1p6/2bp3n/8/2N1B1P1/PP1QPPBP/R4RK1 b - - 4 15
+    rnbqkb1r/ppp2ppp/4pn2/6B1/1PpP4/2N5/P3PPPP/R2QKBNR b KQkq b3 0 5
     println!("{}", p.get_chess_board_string());*/
 }

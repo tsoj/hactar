@@ -83,12 +83,12 @@ impl MctNode
         let move_list = self.position.generate_move_list();
         for i in 0..move_list.len
         {
-            if self.childs[i].position.is_check_unkown_kings_index(self.position.us, self.position.enemy)
+            let mut new_position = self.position.clone();
+            new_position.make_move(&move_list[i]);
+            if new_position.is_check_unkown_kings_index(self.position.us, self.position.enemy)
             {
                 continue;
             }
-            let mut new_position = self.position.clone();
-            new_position.make_move(&move_list[i]);
             self.childs.push(
                 MctNode
                 {
@@ -102,10 +102,10 @@ impl MctNode
             );
         }
     }
-    fn chose_most_promising_child(&mut self) -> &mut MctNode
+    fn chose_most_promising_child(&mut self) -> Option<&mut MctNode>
     {
         let mut best = 0.0;
-        let mut best_index = 0;
+        let mut best_index = None;
         for i in 0..self.childs.len()
         {
             if self.childs[i].finished
@@ -116,17 +116,17 @@ impl MctNode
             if current_score > best
             {
                 best = current_score;
-                best_index = i;
+                best_index = Some(i);
             }
         }
-        &mut self.childs[best_index]
-    }
-    fn expand(&mut self) -> usize
-    {
-        if self.finished
+        match best_index
         {
-            return 0;
-        }
+            Some(x) => return Some(&mut self.childs[x]),
+            None => return None
+        };
+    }
+    fn expand(&mut self)
+    {
         if self.childs.len() == 0
         {
             self.generate_child_nodes();
@@ -147,11 +147,19 @@ impl MctNode
                     self.win_prob = 0.5;
                 }
                 self.finished = true;
+                return;
             }
         }
         else
         {
-            self.chose_most_promising_child().expand();
+            match self.chose_most_promising_child()
+            {
+                Some(x) =>
+                {
+                    x.expand();
+                },
+                None => {}
+            };
             self.simulations += 1;
         }
         self.win_prob = 0.0;
@@ -162,7 +170,6 @@ impl MctNode
                 self.win_prob = 1.0 - self.childs[i].win_prob;
             }
         }
-        0
     }
     fn get_win_prob(&self) -> Probability
     {

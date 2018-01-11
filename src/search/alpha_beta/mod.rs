@@ -217,23 +217,28 @@ pub fn quiesce(
     mut check_extensions: u8
 ) -> Score
 {
-    let in_check = orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy);
     let stand_pat = orig_position.evaluate();
-    if stand_pat > alpha && (!in_check || check_extensions > MAX_NUM_CHECKS_EXTENSIONS_IN_QUIESCE)
+    if stand_pat > alpha
     {
         alpha = stand_pat;
     }
-    if stand_pat >= beta
+    let in_check = orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && check_extensions < MAX_NUM_CHECKS_EXTENSIONS_IN_QUIESCE;
+    if stand_pat >= beta && !in_check
     {
-        return beta;
+        return beta + 1;
     }
+    let mut move_list;
     if in_check
     {
+        move_list = orig_position.generate_move_list();
         check_extensions += 1;
     }
-    let mut current_score: Score;
-    let mut move_list = orig_position.generate_capture_move_list();
+    else
+    {
+        move_list = orig_position.generate_capture_move_list();
+    }
     move_list.sort_moves();
+    let mut number_legal_moves = 0;
     for i in 0..move_list.len
     {
         let mut new_position = orig_position.clone();
@@ -242,16 +247,26 @@ pub fn quiesce(
         {
             continue;
         }
-        current_score = -quiesce(&new_position, -beta, -alpha, check_extensions);
+        number_legal_moves += 1;
+        let current_score = -quiesce(&new_position, -beta, -alpha, check_extensions);
 
         if current_score > alpha
         {
             alpha = current_score;
             if current_score >= beta
             {
-                break;
+                return beta + 1;
             }
         }
+    }
+    //check for MATE or STALEMATE
+    if number_legal_moves == 0
+    {
+        if in_check
+        {
+            alpha = -SCORE_MATE;
+        }
+        alpha = stand_pat;
     }
     alpha
 }

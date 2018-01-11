@@ -22,14 +22,14 @@ pub fn score_to_probability(mut score: Score) -> Probability
     {
         score = score*multiplier;
     }
-    let mut score = (score + SCORE_MATE) as f64 / (2*SCORE_MATE) as f64;
-    if score > 1.0
+    let mut ret = (score + SCORE_MATE) as f64 / (2*SCORE_MATE) as f64;
+    if ret > 1.0
     {
-        score = 1.0;
+        ret = 0.99;
     }
-    else if score < 0.0
+    else if ret < 0.0
     {
-        score = 0.0;
+        ret = 0.01;
     }
-    score
+    ret
 }
