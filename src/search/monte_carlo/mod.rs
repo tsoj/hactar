@@ -2,8 +2,7 @@
 
 use position::Position;
 use evaluation::score::{SCORE_INFINITY};
-use search::alpha_beta::Searcher;
-use search::node_type::{NORMAL_NODE};
+use search::alpha_beta::quiesce;
 use position::mov::Move;
 use evaluation::probability::Probability;
 use evaluation::probability::score_to_probability;
@@ -19,7 +18,8 @@ struct MctNode
     pub win_prob: Probability,
     pub simulations: usize,
     pub mov: Move,
-    pub position: Position
+    pub position: Position,
+    pub finished: bool
 }
 impl MctNode
 {
@@ -83,6 +83,10 @@ impl MctNode
         let move_list = self.position.generate_move_list();
         for i in 0..move_list.len
         {
+            if self.childs[i].position.is_check_unkown_kings_index(self.position.us, self.position.enemy)
+            {
+                continue;
+            }
             let mut new_position = self.position.clone();
             new_position.make_move(&move_list[i]);
             self.childs.push(
@@ -92,7 +96,8 @@ impl MctNode
                     win_prob: 0.0,
                     simulations: 0,
                     mov: move_list[i].clone(),
-                    position: new_position
+                    position: new_position,
+                    finished: false
                 }
             );
         }
@@ -103,6 +108,10 @@ impl MctNode
         let mut best_index = 0;
         for i in 0..self.childs.len()
         {
+            if self.childs[i].finished
+            {
+                continue;
+            }
             let current_score = node_score(self.childs[i].win_prob, self.childs[i].simulations, self.simulations);
             if current_score > best
             {
@@ -114,50 +123,56 @@ impl MctNode
     }
     fn expand(&mut self) -> usize
     {
+        if self.finished
+        {
+            return 0;
+        }
         if self.childs.len() == 0
         {
             self.generate_child_nodes();
             for i in 0..self.childs.len()
             {
-                self.childs[i].simulations = 1;
                 self.childs[i].win_prob = self.childs[i].get_win_prob();
+                self.childs[i].simulations = 1;
             }
             self.simulations += self.childs.len();
+            if self.childs.len() == 0
+            {
+                if self.position.is_check_unkown_kings_index(self.position.us, self.position.enemy)
+                {
+                    self.win_prob = 0.0;
+                }
+                else
+                {
+                    self.win_prob = 0.5;
+                }
+                self.finished = true;
+            }
         }
         else
         {
-            let mut win_prob = self.win_prob;
-            {
-                let chosen_child = self.chose_most_promising_child();
-                chosen_child.expand();
-                if 1.0 - chosen_child.win_prob > win_prob
-                {
-                    win_prob = 1.0 - chosen_child.win_prob;
-                }
-            }
-            self.win_prob = win_prob;
+            self.chose_most_promising_child().expand();
             self.simulations += 1;
+        }
+        self.win_prob = 0.0;
+        for i in 0..self.childs.len()
+        {
+            if 1.0 - self.childs[i].win_prob > self.win_prob
+            {
+                self.win_prob = 1.0 - self.childs[i].win_prob;
+            }
         }
         0
     }
     fn get_win_prob(&self) -> Probability
     {
-        let mut searcher = Searcher
-        {
-            nodes_count: 0,
-            pv: Vec::new(),
-            best_move: Move::empty_move(),
-            should_stop: Arc::new(AtomicBool::new(false))
-        };
-        let mut pv = Vec::new();
-        let depth = 1;
-        score_to_probability(searcher.nega_max(NORMAL_NODE, &self.position, depth, -SCORE_INFINITY, SCORE_INFINITY, &mut pv, 0))
+        score_to_probability(quiesce(&self.position, -SCORE_INFINITY, SCORE_INFINITY, 0))
     }
 }
 
 fn node_score(wins: Probability, simulations: usize, simulations_parent_node: usize) -> Probability
 {
-    let c = 1.5;
+    let c = 1.1;
     wins + c*((simulations_parent_node as f64).ln() / simulations as f64).sqrt()
 }
 pub fn go_monte_carlo(position: Position, should_stop: Arc<AtomicBool>)
@@ -168,7 +183,8 @@ pub fn go_monte_carlo(position: Position, should_stop: Arc<AtomicBool>)
         win_prob: 0.0,
         simulations: 0,
         mov: Move::empty_move(),
-        position: position
+        position: position,
+        finished: false
     };
     while should_stop.load(Ordering::Relaxed) == false
     {
@@ -192,4 +208,5 @@ pub fn go_monte_carlo(position: Position, should_stop: Arc<AtomicBool>)
     println!("min depth: {}", min_depth);
     println!("nodes: {}", root_node.get_number_nodes());
     println!("simulations: {}", root_node.simulations);
+    println!("bestmove {}", root_node.childs[best_index].mov.get_move_notation());
 }
