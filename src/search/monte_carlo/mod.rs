@@ -162,6 +162,7 @@ impl MctNode
             };
             self.simulations += 1;
         }
+        
         self.win_prob = 0.0;
         for i in 0..self.childs.len()
         {
@@ -173,13 +174,14 @@ impl MctNode
     }
     fn get_win_prob(&self) -> Probability
     {
-        score_to_probability(quiesce(&self.position, -SCORE_INFINITY, SCORE_INFINITY, 0))
+        score_to_probability(quiesce(&self.position, -SCORE_INFINITY, SCORE_INFINITY))
+        //score_to_probability(self.position.evaluate())
     }
 }
 
 fn node_score(wins: Probability, simulations: usize, simulations_parent_node: usize) -> Probability
 {
-    let c = 1.1;
+    let c = 1.414;
     wins + c*((simulations_parent_node as f64).ln() / simulations as f64).sqrt()
 }
 pub fn go_monte_carlo(position: Position, should_stop: Arc<AtomicBool>)

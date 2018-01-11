@@ -213,8 +213,7 @@ impl Searcher
 pub fn quiesce(
     orig_position: &Position,
     mut alpha: Score,
-    beta: Score,
-    mut check_extensions: u8
+    beta: Score
 ) -> Score
 {
     let stand_pat = orig_position.evaluate();
@@ -222,21 +221,11 @@ pub fn quiesce(
     {
         alpha = stand_pat;
     }
-    let in_check = orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && check_extensions < MAX_NUM_CHECKS_EXTENSIONS_IN_QUIESCE;
-    if stand_pat >= beta && !in_check
+    if stand_pat >= beta
     {
         return beta + 1;
     }
-    let mut move_list;
-    if in_check
-    {
-        move_list = orig_position.generate_move_list();
-        check_extensions += 1;
-    }
-    else
-    {
-        move_list = orig_position.generate_capture_move_list();
-    }
+    let mut move_list = orig_position.generate_capture_move_list();
     move_list.sort_moves();
     let mut number_legal_moves = 0;
     for i in 0..move_list.len
@@ -248,7 +237,7 @@ pub fn quiesce(
             continue;
         }
         number_legal_moves += 1;
-        let current_score = -quiesce(&new_position, -beta, -alpha, check_extensions);
+        let current_score = -quiesce(&new_position, -beta, -alpha);
 
         if current_score > alpha
         {
@@ -262,10 +251,6 @@ pub fn quiesce(
     //check for MATE or STALEMATE
     if number_legal_moves == 0
     {
-        if in_check
-        {
-            alpha = -SCORE_MATE;
-        }
         alpha = stand_pat;
     }
     alpha
