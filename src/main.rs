@@ -4,14 +4,12 @@ mod position;
 mod search;
 mod evaluation;
 
-use search::alpha_beta::Searcher;
+use search::Searcher;
 use search::perft;
-use search::{Depth, MAX_DEPTH};
+use search::Depth;
 use position::{Position, piece};
 use position::mov::Move;
 use position::piece::{PAWN, NO_PIECE};
-use search::monte_carlo::go_monte_carlo;
-use evaluation::probability::score_to_probability;
 
 use std::io;
 use std::io::prelude::*;
@@ -144,7 +142,7 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
 {
     #![allow(unused_variables)]
     #![allow(unused_assignments)]
-    let mut depth = MAX_DEPTH;
+    let mut depth = search::MAX_DEPTH;
     let mut wtime: Option<usize> = None;
 	let mut btime: Option<usize> = None;
 	let mut winc: Option<usize> = None;
@@ -199,7 +197,7 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
     }
     let temp_position = position.clone();
     let temp_should_stop = Arc::clone(&should_stop);
-    let child = thread::Builder::new().name("search".to_string()).spawn(move || { go_monte_carlo(temp_position, temp_should_stop) });
+    thread::spawn(move || { Searcher::go(temp_position, depth, temp_should_stop) });
 }
 fn stop_in(miliseconds: usize, should_stop: Arc<AtomicBool>)
 {
@@ -234,11 +232,6 @@ fn print_debug(position: &Position)
 {
     println!("{}",position.get_data_string());
 }
-fn eval(position: &Position)
-{
-    println!("score: {}",position.evaluate());
-    println!("winning probability: {}",score_to_probability(position.evaluate()));
-}
 
 fn main()
 {
@@ -266,7 +259,6 @@ fn main()
             "isready" => println!("readyok"),
             "position" => set_position(&mut position, params),
             "go" => go(&position, params, &mut should_stop),
-            "eval" => eval(&position),
             "stop" => stop(&mut should_stop),
             "quit" => { stop(&mut should_stop); return },
             "print" => print(&position),
@@ -285,7 +277,5 @@ fn main()
     println!("{}", p.get_chess_board_string());
     let m = Searcher::go(&p, search::MAX_DEPTH);
     p.make_move(&m);
-    r2q1rk1/pb3ppp/1p6/2bp3n/8/2N1B1P1/PP1QPPBP/R4RK1 b - - 4 15
-    rnbqkb1r/ppp2ppp/4pn2/6B1/1PpP4/2N5/P3PPPP/R2QKBNR b KQkq b3 0 5
     println!("{}", p.get_chess_board_string());*/
 }

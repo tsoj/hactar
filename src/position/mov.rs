@@ -4,6 +4,7 @@ use std::ops::{Index,IndexMut};
 use std::cmp::Ordering;
 use evaluation;
 use position;
+use search::transposition_table;
 
 #[derive(Copy, Clone)]
 pub struct Move
@@ -121,7 +122,6 @@ impl MoveList
     {
         MoveList{len: 0, a: unsafe{::std::mem::uninitialized()}}
     }
-    #[inline(always)]
     pub fn add_move(
         &mut self,
         from: usize,
@@ -362,8 +362,32 @@ impl MoveList
             }
         }
     }
-    #[inline(always)]
-    pub fn sort_moves(&mut self)
+    pub fn sort_moves(&mut self, transposition_table: &transposition_table::TranspositionTable, pv_move: &Move)
+    {
+        for i in 0..self.len
+        {
+            if pv_move.to == self[i].to && pv_move.from == self[i].from
+            {
+                self[i].score = 10000;
+                continue;
+            }
+            self[i].score = 0;
+            /*MVV-LVA*/
+            self[i].score += evaluation::score::SCORE[self[i].promoted];
+            if self[i].captured != position::piece::NO_PIECE
+            {
+                self[i].score += evaluation::score::SCORE[self[i].captured];
+                self[i].score -= evaluation::score::SCORE[self[i].moved]/8;
+            }
+            /*Transposition-Table, fail-high first*/
+            if transposition_table.failed_high(self[i].zobrist_key)
+            {
+                self[i].score = 1000;
+            }
+        }
+        &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
+    }
+    pub fn sort_moves_quiesce(&mut self)
     {
         for i in 0..self.len
         {
@@ -377,5 +401,20 @@ impl MoveList
             }
         }
         &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
+    }
+    pub fn get_number_legal_moves(&self, orig_position: &position::Position) -> usize
+    {
+        let mut number_legal_moves = 0;
+        for i in 0..self.len
+        {
+            let mut n_position = orig_position.clone();
+            n_position.make_move(&self[i]);
+            if n_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
+            {
+                continue;
+            }
+            number_legal_moves += 1;
+        }
+        number_legal_moves
     }
 }
