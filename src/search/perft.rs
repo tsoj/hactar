@@ -1,8 +1,6 @@
 #![allow(unused_must_use)]
 use position::Position;
 use search::Depth;
-use std::io;
-use std::io::Write;
 
 fn perft(depth: Depth, orig_position: &Position) -> u64
 {
@@ -32,7 +30,6 @@ fn perft(depth: Depth, orig_position: &Position) -> u64
 
 pub fn test_perft()
 {
-    print!("TESTING..."); io::stdout().flush();
     let mut p = Position::empty_position();
     p.set_from_fen(&"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0".to_string());
     if perft(4, &p) != 4085603
@@ -41,5 +38,4 @@ pub fn test_perft()
         println!("{}", perft(4, &p));
         panic!();
     }
-    println!("DONE!");
 }

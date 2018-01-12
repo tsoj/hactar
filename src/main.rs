@@ -10,6 +10,7 @@ use search::Depth;
 use position::{Position, piece};
 use position::mov::Move;
 use position::piece::{PAWN, NO_PIECE};
+use position::player::{WHITE};
 
 use std::io;
 use std::io::prelude::*;
@@ -143,13 +144,13 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
     #![allow(unused_variables)]
     #![allow(unused_assignments)]
     let mut depth = search::MAX_DEPTH;
-    let mut wtime: Option<usize> = None;
-	let mut btime: Option<usize> = None;
-	let mut winc: Option<usize> = None;
-	let mut binc: Option<usize> = None;
-	let mut movestogo: Option<usize> = None;
-    let mut movetime: Option<usize> = None;
-    let mut nodes: Option<usize> = None;
+    let mut wtime: Option<i64> = None;
+	let mut btime: Option<i64> = None;
+	let mut winc: Option<i64> = None;
+	let mut binc: Option<i64> = None;
+	let mut movestogo: Option<i64> = None;
+    let mut movetime: Option<i64> = None;
+    let mut nodes: Option<i64> = None;
     let mut parameter_type: Option<&str> = None;
     for parameter in params
     {
@@ -160,15 +161,16 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
                 match x
                 {
                     "depth" => depth = parameter.parse::<Depth>().unwrap(),
-                    "wtime" => wtime = Some(parameter.parse::<usize>().unwrap()),
-                    "btime" => btime = Some(parameter.parse::<usize>().unwrap()),
-                    "winc" => winc = Some(parameter.parse::<usize>().unwrap()),
-                    "binc" => binc = Some(parameter.parse::<usize>().unwrap()),
-                    "movestogo" => movestogo = Some(parameter.parse::<usize>().unwrap()),
-                    "movetime" => movetime = Some(parameter.parse::<usize>().unwrap()),
-                    "nodes" => nodes = Some(parameter.parse::<usize>().unwrap()),
+                    "wtime" => wtime = Some(parameter.parse::<i64>().unwrap()),
+                    "btime" => btime = Some(parameter.parse::<i64>().unwrap()),
+                    "winc" => winc = Some(parameter.parse::<i64>().unwrap()),
+                    "binc" => binc = Some(parameter.parse::<i64>().unwrap()),
+                    "movestogo" => movestogo = Some(parameter.parse::<i64>().unwrap()),
+                    "movetime" => movetime = Some(parameter.parse::<i64>().unwrap()),
+                    "nodes" => nodes = Some(parameter.parse::<i64>().unwrap()),
                     _x => println!("Unknown parameter: {}", _x)
-                }
+                };
+                parameter_type = None;
             },
             None =>
             {
@@ -180,26 +182,69 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
     #[warn(unused_assignments)]
 
     should_stop.store(false, Ordering::Relaxed);
-    let mut time_limit: Option<usize> = None;
     match movetime
-    {
-        Some(x) => time_limit = Some(x),
-        None => {}
-    }
-    match time_limit
     {
         Some(x) =>
         {
             let temp_should_stop = Arc::clone(&should_stop);
-            thread::spawn(move || { stop_in(x, temp_should_stop) });
+            let child = thread::Builder::new().name("timer".to_string()).spawn(move || { stop_in(x, temp_should_stop) });
         },
         None => {}
     }
+    if movestogo == None
+    {
+        let averange_game_length = 80;
+        movestogo = Some(averange_game_length - position.fullmoves_played as i64);
+        if movestogo.unwrap() < 10
+        {
+            movestogo = Some(10)
+        }
+    }
+    let time_per_move;
+    if position.us == WHITE
+    {
+        if wtime == None && winc == None
+        {
+            time_per_move = -1;
+        }
+        else
+        {
+            if winc == None
+            {
+                winc = Some(0);
+            }
+            if wtime == None
+            {
+                wtime = Some(0);
+            }
+            time_per_move = wtime.unwrap()/movestogo.unwrap() + winc.unwrap();
+        }
+    }
+    else
+    {
+        if btime == None && binc == None
+        {
+            time_per_move = -1;
+        }
+        else
+        {
+            if binc == None
+            {
+                binc = Some(0);
+            }
+            if btime == None
+            {
+                btime = Some(0);
+            }
+            time_per_move = btime.unwrap()/movestogo.unwrap() + binc.unwrap();
+        }
+    }
+
     let temp_position = position.clone();
     let temp_should_stop = Arc::clone(&should_stop);
-    thread::spawn(move || { Searcher::go(temp_position, depth, temp_should_stop) });
+    let child = thread::Builder::new().name("search".to_string()).spawn(move || { Searcher::go(temp_position, depth, temp_should_stop, time_per_move) });
 }
-fn stop_in(miliseconds: usize, should_stop: Arc<AtomicBool>)
+fn stop_in(miliseconds: i64, should_stop: Arc<AtomicBool>)
 {
     let now = SystemTime::now();
     let mut time = 0;
@@ -209,7 +254,7 @@ fn stop_in(miliseconds: usize, should_stop: Arc<AtomicBool>)
         {
             Ok(elapsed) =>
             {
-                time = ((format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos())).parse::<f32>().unwrap()*1000.0) as usize;
+                time = ((format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos())).parse::<f64>().unwrap()*1000.0) as i64;
             }
             Err(e) =>
             {
@@ -235,16 +280,13 @@ fn print_debug(position: &Position)
 
 fn main()
 {
-
-    println!("STARTED!");
     perft::test_perft();
 
-    let mut should_stop = Arc::new(AtomicBool::new(true));
-    let mut position = Position::empty_position();
     let stdin = io::stdin();
+    let mut position = Position::empty_position();
     for line in stdin.lock().lines()
     {
-        //TODO: dont crash without command and enter...
+        let mut should_stop = Arc::new(AtomicBool::new(true));
         let line = line.unwrap_or("".into());
         let mut params = line.split_whitespace();
         let command;

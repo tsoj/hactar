@@ -191,7 +191,7 @@ impl Searcher
         }
         alpha
     }
-    pub fn go(orig_position: Position, depth: Depth, should_stop: Arc<AtomicBool>) -> Move
+    pub fn go(orig_position: Position, depth: Depth, should_stop: Arc<AtomicBool>, time_per_move_ms: i64) -> Move
     {
         let mut searcher = Searcher
         {
@@ -201,7 +201,6 @@ impl Searcher
             best_move: Move::empty_move()
         };
         let mut best_move = Move::empty_move();
-
         for i in 1..(depth+1)
         {
             let now = SystemTime::now();
@@ -217,7 +216,7 @@ impl Searcher
                 {
                     Ok(elapsed) =>
                     {
-                        time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f32>().unwrap();
+                        time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f64>().unwrap();
                     }
                     Err(e) =>
                     {
@@ -229,7 +228,7 @@ impl Searcher
                 print!("depth {} ", i);
                 print!("time {} ", time*1000.0);
                 print!("nodes {} ", searcher.nodes_count);
-                print!("nps {} ", (searcher.nodes_count as f32 / time) as u64);
+                print!("nps {} ", (searcher.nodes_count as f64 / time) as u64);
                 if score >= SCORE_MATE
                 {
                     print!("score mate {}", (-score + SCORE_MATE + i as Score + 1)/2);
@@ -251,6 +250,15 @@ impl Searcher
                 if score >= SCORE_MATE || score <= -SCORE_MATE
                 {
                     break;
+                }
+                if time_per_move_ms != -1
+                {
+                    let time_last_iteration = (time*1000.0)as i64;
+                    let estimated_time_next_iteration = (time_last_iteration - 300)*10;
+                    if estimated_time_next_iteration > time_per_move_ms && i >= 6
+                    {
+                        break;
+                    }
                 }
             }
         }

@@ -63,8 +63,8 @@ pub struct Position
     pub zobrist_key: u64,
     pub us: Player,
     pub enemy: Player,
-    pub fullmoves_played: u32,
-    pub halfmove_clock: u32
+    pub fullmoves_played: u16,
+    pub halfmove_clock: u16
 }
 impl Position
 {
@@ -336,8 +336,8 @@ impl Position
             }
             p.en_passant_castling |= BIT_AT_INDEX[en_passant_target_field_index];
         }
-        p.halfmove_clock = halfmove_clock.parse::<u32>().unwrap();
-        p.fullmoves_played = fullmove_number.parse::<u32>().unwrap();
+        p.halfmove_clock = halfmove_clock.parse::<u16>().unwrap();
+        p.fullmoves_played = fullmove_number.parse::<u16>().unwrap();
         p.zobrist_key = p.calculate_zobristkey();
         self.clone_from(&p);
         true
