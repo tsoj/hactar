@@ -42,6 +42,7 @@ impl Searcher
         {
             return 0;
         }
+
         self.nodes_count += 1;
         if depth==0
         {
@@ -55,13 +56,9 @@ impl Searcher
         };
 
         let mut current_score: Score;
-        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && node_type != ROOT_NODE && depth <= 5
+        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && node_type != ROOT_NODE && depth <= 3
         {
-            let current_score = orig_position.evaluate();// - VALUE_PAWN;
-            if current_score > alpha
-            {
-                alpha = current_score;
-            }
+            let current_score = orig_position.evaluate();
             if current_score >= beta
             {
                 return current_score;

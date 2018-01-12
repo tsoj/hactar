@@ -13,7 +13,7 @@ __hactar__ is a simple chessengine written in rust.
 ### uci
 - [x] basic uci framwork
 - [x] mutlithreading for all time input
-- [ ] setoptions for different search types
+- [ ] setoptions
 
 ### alpha-beta
 - [x] move sorting
