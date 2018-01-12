@@ -4,6 +4,7 @@ pub mod node;
 
 use position::mov::{Move};
 use position::Position;
+use position::piece::NO_PIECE;
 use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY};//, VALUE_PAWN};
 use search::transposition_table::TranspositionTable;
 use search::node::{Node, NORMAL_NODE, ROOT_NODE};
@@ -43,6 +44,12 @@ impl Searcher
             return 0;
         }
 
+        match self.transposition_table.get_score(orig_position.zobrist_key, depth)
+        {
+            Some(x) => return x,
+            None =>{}
+        }
+
         self.nodes_count += 1;
         if depth==0
         {
@@ -56,7 +63,8 @@ impl Searcher
         };
 
         let mut current_score: Score;
-        if !orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy) && node_type != ROOT_NODE && depth <= 3
+        let in_check = orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy);
+        if !in_check && node_type != ROOT_NODE && depth <= 3
         {
             let current_score = orig_position.evaluate();
             if current_score >= beta
@@ -77,24 +85,18 @@ impl Searcher
                 continue;
             }
             number_legal_moves += 1;
-            let mut candidate_pv = Vec::new();
 
-            match self.transposition_table.get_score(move_list[i].zobrist_key, depth)
+            let mut candidate_pv = Vec::new();
+            if
+                i >= 4 &&
+                !in_check &&
+                move_list[i].captured == NO_PIECE &&
+                depth >= 2 &&
+                -self.nega_max(NORMAL_NODE, &new_position, depth - 2, -beta, -alpha, &mut candidate_pv) <= alpha
             {
-                Some(x) => current_score = x,
-                None =>
-                {
-                    current_score = -self.nega_max(
-                        NORMAL_NODE,
-                        &new_position,
-                        depth -1,
-                        -beta,
-                        -alpha,
-                        &mut candidate_pv
-                    );
-                    self.transposition_table.add(move_list[i].zobrist_key, current_score, depth);
-                }
+                continue;
             }
+            current_score = -self.nega_max(NORMAL_NODE, &new_position, depth - 1, -beta, -alpha, &mut candidate_pv);
             if current_score > alpha
             {
                 alpha = current_score;
@@ -123,6 +125,7 @@ impl Searcher
                 alpha = 0;
             }
         }
+        self.transposition_table.add(orig_position.zobrist_key, alpha, depth);
         alpha
     }
     fn quiesce(
@@ -229,21 +232,21 @@ impl Searcher
                     }
                 }
                 print!("info ");
-                print!("depth {0: <3}", i);
-                print!("time {0: <9}", (time*1000.0) as u64);
-                print!("nodes {0: <12}", searcher.nodes_count);
-                print!("nps {0: <9}", (searcher.nodes_count as f64 / time) as u64);
+                print!("depth {0: <2} ", i);
+                print!("time {0: <8} ", (time*1000.0) as u64);
+                print!("nodes {0: <11} ", searcher.nodes_count);
+                print!("nps {0: <9} ", (searcher.nodes_count as f64 / time) as u64);
                 if score >= SCORE_MATE
                 {
-                    print!("score mate {}", (-score + SCORE_MATE + i as Score + 1)/2);
+                    print!("score mate {0: <8} ", (-score + SCORE_MATE + i as Score + 1)/2);
                 }
                 else if score <= -SCORE_MATE
                 {
-                    print!("score mate {0: <10}", -(score + SCORE_MATE + i as Score + 1)/2);
+                    print!("score mate {0: <8} ", -(score + SCORE_MATE + i as Score + 1)/2);
                 }
                 else
                 {
-                    print!("score cp {0: <10}", score);
+                    print!("score cp {0: <8} ", score);
                 }
                 print!("pv ");
                 for i in 0..searcher.pv.len()
