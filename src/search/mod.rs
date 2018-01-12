@@ -24,6 +24,7 @@ pub struct Searcher
     pub best_move: Move,
     pub nodes_count: u64,
     pub pv: PV,
+    pub should_stop: Arc<AtomicBool>
 }
 impl Searcher
 {
@@ -34,11 +35,10 @@ impl Searcher
         depth: Depth,
         mut alpha: Score,
         beta: Score,
-        pv: &mut PV,
-        should_stop: &Arc<AtomicBool>
+        pv: &mut PV
     ) -> Score
     {
-        if should_stop.load(Ordering::Relaxed)
+        if self.should_stop.load(Ordering::Relaxed)
         {
             return 0;
         }
@@ -78,19 +78,22 @@ impl Searcher
             }
             number_legal_moves += 1;
             let mut candidate_pv = Vec::new();
-            current_score = -self.nega_max(
-                NORMAL_NODE,
-                &new_position,
-                depth -1,
-                -beta,
-                -alpha,
-                &mut candidate_pv,
-                &should_stop
-            );
-            match self.transposition_table.get_score(orig_position.zobrist_key, depth -1, &move_list[i])
+
+            match self.transposition_table.get_score(move_list[i].zobrist_key, depth)
             {
-                Some(x) => return x,
-                None => self.transposition_table.add(move_list[i].zobrist_key, -current_score, depth -1, &move_list[i])
+                Some(x) => current_score = x,
+                None =>
+                {
+                    current_score = -self.nega_max(
+                        NORMAL_NODE,
+                        &new_position,
+                        depth -1,
+                        -beta,
+                        -alpha,
+                        &mut candidate_pv
+                    );
+                    self.transposition_table.add(move_list[i].zobrist_key, current_score, depth);
+                }
             }
             if current_score > alpha
             {
@@ -198,7 +201,8 @@ impl Searcher
             transposition_table: TranspositionTable::empty_transposition_table(100_000_000),
             nodes_count: 0,
             pv: Vec::new(),
-            best_move: Move::empty_move()
+            best_move: Move::empty_move(),
+            should_stop: should_stop
         };
         let mut best_move = Move::empty_move();
         for i in 1..(depth+1)
@@ -206,8 +210,8 @@ impl Searcher
             let now = SystemTime::now();
             searcher.nodes_count = 0;
             let mut pv = Vec::new();
-            let score = searcher.nega_max(ROOT_NODE, &orig_position, i, -SCORE_INFINITY, SCORE_INFINITY, &mut pv, &should_stop);
-            if should_stop.load(Ordering::Relaxed) == false
+            let score = searcher.nega_max(ROOT_NODE, &orig_position, i, -SCORE_INFINITY, SCORE_INFINITY, &mut pv);
+            if searcher.should_stop.load(Ordering::Relaxed) == false
             {
                 best_move = searcher.best_move;
                 searcher.pv = pv;
@@ -225,23 +229,23 @@ impl Searcher
                     }
                 }
                 print!("info ");
-                print!("depth {} ", i);
-                print!("time {} ", time*1000.0);
-                print!("nodes {} ", searcher.nodes_count);
-                print!("nps {} ", (searcher.nodes_count as f64 / time) as u64);
+                print!("depth {0: <3}", i);
+                print!("time {0: <9}", (time*1000.0) as u64);
+                print!("nodes {0: <12}", searcher.nodes_count);
+                print!("nps {0: <9}", (searcher.nodes_count as f64 / time) as u64);
                 if score >= SCORE_MATE
                 {
                     print!("score mate {}", (-score + SCORE_MATE + i as Score + 1)/2);
                 }
                 else if score <= -SCORE_MATE
                 {
-                    print!("score mate {}", -(score + SCORE_MATE + i as Score + 1)/2);
+                    print!("score mate {0: <10}", -(score + SCORE_MATE + i as Score + 1)/2);
                 }
                 else
                 {
-                    print!("score cp {}", score);
+                    print!("score cp {0: <10}", score);
                 }
-                print!(" pv ");
+                print!("pv ");
                 for i in 0..searcher.pv.len()
                 {
                     print!("{} ", searcher.pv[searcher.pv.len()-1 - i].get_move_notation());
@@ -254,7 +258,7 @@ impl Searcher
                 if time_per_move_ms != -1
                 {
                     let time_last_iteration = (time*1000.0)as i64;
-                    let estimated_time_next_iteration = (time_last_iteration - 300)*10;
+                    let estimated_time_next_iteration = (time_last_iteration - 400)*10;
                     if estimated_time_next_iteration > time_per_move_ms && i >= 6
                     {
                         break;

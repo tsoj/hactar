@@ -17,10 +17,11 @@ TODO:
 - rooks together, castling
 - important squares
 */
-const BONUS_PASSED_PAWN: Score = 60;
+const BONUS_PASSED_PAWN: Score = 50;
 const BONUS_HAS_NEIGHBOR_PAWN: Score = 10;
-const BONUS_ROOKS_ARE_CONNECTED: Score = 60;
+const BONUS_ROOKS_ARE_CONNECTED: Score = 50;
 const BONUS_KNIGHT_NOT_ON_EDGE: Score = 10;
+const PENALTY_BISHOP_ON_HOMERANK: Score = 10;
 const PENALTY_KING_UNSAFE: Score = 30;
 
 #[inline(always)]
@@ -47,7 +48,7 @@ fn evaluate_pawn(position: &Position, index: usize, us: Player, enemy: Player) -
 fn evaluate_knight(position: &Position, index: usize, us: Player, enemy: Player) -> Score
 {
     let mut ret = 0;
-    //Knights on the adge are bad
+    //Knights on the edge are bad
     if BIT_AT_INDEX[index] & CENTER_7X7 != 0
     {
         ret += BONUS_KNIGHT_NOT_ON_EDGE;
@@ -58,6 +59,10 @@ fn evaluate_knight(position: &Position, index: usize, us: Player, enemy: Player)
 fn evaluate_bishop(position: &Position, index: usize, us: Player, enemy: Player) -> Score
 {
     let mut ret = 0;
+    if BIT_AT_INDEX[index] & HOME_RANK[us] != 0
+    {
+        ret -= PENALTY_BISHOP_ON_HOMERANK;
+    }
     ret
 }
 #[inline(always)]

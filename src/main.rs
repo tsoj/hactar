@@ -284,9 +284,10 @@ fn main()
 
     let stdin = io::stdin();
     let mut position = Position::empty_position();
+    let mut should_stop = Arc::new(AtomicBool::new(false));
+    position.set_from_fen(&STARTPOS_FEN.to_string());
     for line in stdin.lock().lines()
     {
-        let mut should_stop = Arc::new(AtomicBool::new(true));
         let line = line.unwrap_or("".into());
         let mut params = line.split_whitespace();
         let command;
