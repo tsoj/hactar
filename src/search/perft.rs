@@ -1,6 +1,8 @@
-#![allow(unused_must_use)]
+#![allow(dead_code)]
 use position::Position;
 use search::Depth;
+
+use std::time::SystemTime;
 
 fn perft(depth: Depth, orig_position: &Position) -> u64
 {
@@ -32,10 +34,36 @@ pub fn test_perft()
 {
     let mut p = Position::empty_position();
     p.set_from_fen(&"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0".to_string());
-    if perft(4, &p) != 4085603
+    if perft(4, &p) != 4_085_603
     {
         println!("\nFailed Perft-Test");
         println!("{}", perft(4, &p));
         panic!();
     }
+}
+
+pub fn benchmark_perft()
+{
+    let mut p = Position::empty_position();
+    p.set_from_fen(&"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string());
+    let now = SystemTime::now();
+    if perft(6, &p) != 119_060_324
+
+    {
+        panic!();
+    }
+    let time;
+    match now.elapsed()
+    {
+        Ok(elapsed) =>
+        {
+            time = format!("{}.{}", elapsed.as_secs(), elapsed.subsec_nanos()).parse::<f64>().unwrap();
+        }
+        Err(e) =>
+        {
+            println!("Error: {:?}", e);
+            panic!();
+        }
+    }
+    println!("nps: {}", (119_060_324f64 /time) as u64);
 }

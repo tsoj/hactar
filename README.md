@@ -20,6 +20,8 @@ __hactar__ is a simple chessengine written in rust.
 - [x] quiescence search
 - [x] iterativ deepening
 - [x] transposition table
+- [x] late move reduction
+- [x] some kind of nullmove pruning
 - [ ] performance improvements
 - [ ] further pruning and extensions
 
