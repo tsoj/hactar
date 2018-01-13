@@ -24,7 +24,6 @@ const MAX_NUM_CHECKS_IN_QUIESCE: u8 = 2;
 pub struct Searcher
 {
     pub transposition_table: TranspositionTable,
-    pub best_move: Move,
     pub nodes_count: u64,
     pub pv: PV,
     pub should_stop: Arc<AtomicBool>
@@ -102,10 +101,6 @@ impl Searcher
             if current_score > alpha
             {
                 alpha = current_score;
-                if node_type == ROOT_NODE
-                {
-                    self.best_move = move_list[i].clone();
-                }
                 *pv = candidate_pv;
                 pv.push(move_list[i]);
                 if current_score >= beta
@@ -118,7 +113,7 @@ impl Searcher
         //check for MATE or STALEMATE
         if number_legal_moves == 0
         {
-            if orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
+            if in_check
             {
                 alpha = -(SCORE_MATE + depth as Score);
             }
@@ -206,7 +201,6 @@ impl Searcher
             transposition_table: TranspositionTable::empty_transposition_table((options.transposition_table_size_mb*1024*1024)/mem::size_of::<transposition_table::TranspositionTableEntry>()),
             nodes_count: 0,
             pv: Vec::new(),
-            best_move: Move::empty_move(),
             should_stop: should_stop
         };
         let mut best_move = Move::empty_move();
@@ -218,7 +212,7 @@ impl Searcher
             let score = searcher.nega_max(ROOT_NODE, &orig_position, i, -SCORE_INFINITY, SCORE_INFINITY, &mut pv);
             if searcher.should_stop.load(Ordering::Relaxed) == false
             {
-                best_move = searcher.best_move;
+                best_move = pv[pv.len() - 1];
                 searcher.pv = pv;
                 let time;
                 match now.elapsed()

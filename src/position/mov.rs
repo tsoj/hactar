@@ -1,33 +1,41 @@
 
 use chess_data::*;
+use evaluation::score::{SCORE, Score};
+use search::transposition_table::TranspositionTable;
+use position::piece::{NO_PIECE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, Piece};
+use position::piece::get_unicode;
+use position::piece::get_notation;
+use position::get_bitboard_string;
+use position::Position;
+use position::player::{WHITE, BLACK};
+
 use std::ops::{Index,IndexMut};
 use std::cmp::Ordering;
-use evaluation;
-use position;
-use search::transposition_table;
 
 #[derive(Copy, Clone)]
 pub struct Move
 {
     pub from: usize,
     pub to: usize,
-    pub moved: position::piece::Piece,
-    pub captured: position::piece::Piece,
-    pub promoted: position::piece::Piece,
+    pub moved: Piece,
+    pub captured: Piece,
+    pub promoted: Piece,
     pub en_passant_castling: u64,
     pub zobrist_key: u64,
     pub castled: bool,
     pub captured_en_passant: bool,
-    pub score: evaluation::score::Score
+    pub score: Score
 }
 impl PartialOrd for Move
 {
+    #[inline(always)]
     fn partial_cmp(&self, other: &Move) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 impl PartialEq for Move
 {
+    #[inline(always)]
     fn eq(&self, other: &Move) -> bool {
         self.score == other.score
     }
@@ -35,6 +43,7 @@ impl PartialEq for Move
 impl Eq for Move {}
 impl Ord for Move
 {
+    #[inline(always)]
     fn cmp(&self, other: &Move) -> Ordering {
         self.score.cmp(&other.score)
     }
@@ -47,9 +56,9 @@ impl Move
         {
             from: 0,
             to: 0,
-            moved: position::piece::NO_PIECE,
-            captured: position::piece::NO_PIECE,
-            promoted: position::piece::NO_PIECE,
+            moved: NO_PIECE,
+            captured: NO_PIECE,
+            promoted: NO_PIECE,
             en_passant_castling: 0,
             zobrist_key: 0,
             castled: false,
@@ -67,11 +76,11 @@ impl Move
         ret += "\n\tTO: ";
         ret += get_field_notation(self.to);
         ret += "\n\tMOVED: ";
-        ret += position::piece::get_unicode(self.moved);
+        ret += get_unicode(self.moved);
         ret += "\n\tCAPTURED: ";
-        ret += position::piece::get_unicode(self.captured);
+        ret += get_unicode(self.captured);
         ret += "\n\tPROMOTED: ";
-        ret += position::piece::get_unicode(self.promoted);
+        ret += get_unicode(self.promoted);
         ret += "\n\tCASTLED: ";
         ret += &self.castled.to_string()[..];
         ret += "\n\tCAPURED EN PASSANT: ";
@@ -79,7 +88,7 @@ impl Move
         ret += "\n\tZOBRIST KEY: ";
         ret += &format!("{:x}",self.zobrist_key)[..];
         ret += "\n\tMOVE: CASTLING / EN PASSANT:\n";
-        ret += &position::get_bitboard_string(self.en_passant_castling)[..];
+        ret += &get_bitboard_string(self.en_passant_castling)[..];
         ret += "--------------------------------------------------\n";
         ret
     }
@@ -88,9 +97,9 @@ impl Move
         let mut ret = "".to_string();
         ret += get_field_notation(self.from);
         ret += get_field_notation(self.to);
-        if self.promoted != position::piece::NO_PIECE
+        if self.promoted != NO_PIECE
         {
-            ret+= position::piece::get_notation(self.promoted);
+            ret+= get_notation(self.promoted);
         }
         ret
     }
@@ -106,12 +115,14 @@ pub struct MoveList
 impl Index<usize> for MoveList
 {
     type Output = Move;
+    #[inline(always)]
     fn index<'a>(&'a self, index: usize) -> &'a  Move {
         &self.a[index]
     }
 }
 impl IndexMut<usize> for MoveList
 {
+    #[inline(always)]
     fn index_mut<'a>(&'a mut self, index: usize) -> &'a mut Move {
         &mut self.a[index]
     }
@@ -126,14 +137,13 @@ impl MoveList
         &mut self,
         from: usize,
         to: usize,
-        moved: position::piece::Piece,
-        captured: position::piece::Piece,
-        promoted: position::piece::Piece,
+        moved: Piece,
+        captured: Piece,
+        promoted: Piece,
         en_passant_castling: u64,
-        zobrist_key: u64,
         castled: bool,
         captured_en_passant: bool,
-        orig_position: &position::Position
+        orig_position: &Position
     )
     {
         let move_list_length = self.len;
@@ -145,7 +155,7 @@ impl MoveList
             captured: captured,
             promoted: promoted,
             en_passant_castling: en_passant_castling,
-            zobrist_key: zobrist_key,
+            zobrist_key: 0,
             castled: castled,
             captured_en_passant: captured_en_passant,
             score: 0
@@ -153,12 +163,12 @@ impl MoveList
         self[move_list_length].zobrist_key = orig_position.get_updated_zobristkey(&self[move_list_length]);
         self.len+=1;
     }
-    pub fn generate_pawn_moves(&mut self, orig_position: &position::Position, new_en_passant_castling: u64, only_captures: bool)
+    pub fn generate_pawn_moves(&mut self, orig_position: &Position, new_en_passant_castling: u64, only_captures: bool)
     {
         let enemy = orig_position.enemy;
         let us = orig_position.us;
-        let mut pawn_occupancy = orig_position.pieces[position::piece::PAWN] & orig_position.players[us];
-        let occupancy = orig_position.players[position::player::WHITE] | orig_position.players[position::player::BLACK];
+        let mut pawn_occupancy = orig_position.pieces[PAWN] & orig_position.players[us];
+        let occupancy = orig_position.players[WHITE] | orig_position.players[BLACK];
         if pawn_occupancy != 0
         {
             loop
@@ -170,14 +180,14 @@ impl MoveList
                     let to = PAWN_QUIET_ATTACK_TABLE[us][from].trailing_zeros() as usize;
                     if BIT_AT_INDEX[to] & HOME_RANK[enemy] != 0
                     {
-                        self.add_move(from, to, position::piece::PAWN, position::piece::NO_PIECE, position::piece::KNIGHT, new_en_passant_castling, 0, false, false, &orig_position);
-                        self.add_move(from, to, position::piece::PAWN, position::piece::NO_PIECE, position::piece::BISHOP, new_en_passant_castling, 0, false, false, &orig_position);
-                        self.add_move(from, to, position::piece::PAWN, position::piece::NO_PIECE, position::piece::ROOK, new_en_passant_castling, 0, false, false, &orig_position);
-                        self.add_move(from, to, position::piece::PAWN, position::piece::NO_PIECE, position::piece::QUEEN, new_en_passant_castling, 0, false, false, &orig_position);
+                        self.add_move(from, to, PAWN, NO_PIECE, KNIGHT, new_en_passant_castling, false, false, &orig_position);
+                        self.add_move(from, to, PAWN, NO_PIECE, BISHOP, new_en_passant_castling, false, false, &orig_position);
+                        self.add_move(from, to, PAWN, NO_PIECE, ROOK, new_en_passant_castling, false, false, &orig_position);
+                        self.add_move(from, to, PAWN, NO_PIECE, QUEEN, new_en_passant_castling, false, false, &orig_position);
                     }
                     else if !only_captures
                     {
-                        self.add_move(from, to, position::piece::PAWN, position::piece::NO_PIECE, position::piece::NO_PIECE, new_en_passant_castling, 0, false, false, &orig_position);
+                        self.add_move(from, to, PAWN, NO_PIECE, NO_PIECE, new_en_passant_castling, false, false, &orig_position);
                         if BIT_AT_INDEX[from] & PAWN_HOME_RANK[us] != 0
                         {
                             let double_push_to = PAWN_QUIET_ATTACK_TABLE[us][to].trailing_zeros() as usize;
@@ -186,11 +196,10 @@ impl MoveList
                                 self.add_move(
                                     from,
                                     double_push_to,
-                                    position::piece::PAWN,
-                                    position::piece::NO_PIECE,
-                                    position::piece::NO_PIECE,
+                                    PAWN,
+                                    NO_PIECE,
+                                    NO_PIECE,
                                     new_en_passant_castling | BIT_AT_INDEX[to],
-                                    0,
                                     false,
                                     false,
                                     &orig_position
@@ -205,21 +214,21 @@ impl MoveList
                     loop
                     {
                         let to = find_and_clear_trailing_one(&mut capture_attack_mask);
-                        for i in 0..position::piece::NO_PIECE
+                        for i in 0..NO_PIECE
                         {
                             if (orig_position.pieces[i] & BIT_AT_INDEX[to]) != 0
                             {
                                 if BIT_AT_INDEX[to] & HOME_RANK[enemy] != 0
                                 {
                                     let n_new_en_passant_castling = new_en_passant_castling & !BIT_AT_INDEX[to];
-                                    self.add_move(from, to, position::piece::PAWN, i as position::piece::Piece, position::piece::KNIGHT, n_new_en_passant_castling, 0, false, false, &orig_position);
-                                    self.add_move(from, to, position::piece::PAWN, i as position::piece::Piece, position::piece::BISHOP, n_new_en_passant_castling, 0, false, false, &orig_position);
-                                    self.add_move(from, to, position::piece::PAWN, i as position::piece::Piece, position::piece::ROOK, n_new_en_passant_castling, 0, false, false, &orig_position);
-                                    self.add_move(from, to, position::piece::PAWN, i as position::piece::Piece, position::piece::QUEEN, n_new_en_passant_castling, 0, false, false, &orig_position);
+                                    self.add_move(from, to, PAWN, i as Piece, KNIGHT, n_new_en_passant_castling, false, false, &orig_position);
+                                    self.add_move(from, to, PAWN, i as Piece, BISHOP, n_new_en_passant_castling, false, false, &orig_position);
+                                    self.add_move(from, to, PAWN, i as Piece, ROOK, n_new_en_passant_castling, false, false, &orig_position);
+                                    self.add_move(from, to, PAWN, i as Piece, QUEEN, n_new_en_passant_castling, false, false, &orig_position);
                                 }
                                 else
                                 {
-                                    self.add_move(from, to, position::piece::PAWN, i as position::piece::Piece, position::piece::NO_PIECE, new_en_passant_castling, 0, false, false, &orig_position);
+                                    self.add_move(from, to, PAWN, i as Piece, NO_PIECE, new_en_passant_castling, false, false, &orig_position);
                                 }
                                 break;
                             }
@@ -235,7 +244,7 @@ impl MoveList
                 if capture_attack_mask != 0
                 {
                     let to = capture_attack_mask.trailing_zeros() as usize;
-                    self.add_move(from, to, position::piece::PAWN, position::piece::PAWN, position::piece::NO_PIECE, new_en_passant_castling, 0, false, true, &orig_position);
+                    self.add_move(from, to, PAWN, PAWN, NO_PIECE, new_en_passant_castling, false, true, &orig_position);
                 }
 
                 if pawn_occupancy == 0
@@ -245,13 +254,13 @@ impl MoveList
             }
         }
     }
-    pub fn generate_castling_moves(&mut self, orig_position: &position::Position, new_en_passant_castling: u64)
+    pub fn generate_castling_moves(&mut self, orig_position: &Position, new_en_passant_castling: u64)
     {
         let enemy = orig_position.enemy;
         let us = orig_position.us;
         if orig_position.en_passant_castling & CASTLING_KING_FROM[us] != 0
         {
-            let occupancy = orig_position.players[position::player::WHITE] | orig_position.players[position::player::BLACK];
+            let occupancy = orig_position.players[WHITE] | orig_position.players[BLACK];
             //QUEENSIDE CASTLING
             if
             orig_position.en_passant_castling & CASTLING_QUEENSIDE_ROOK_FROM[us] != 0 &&
@@ -262,11 +271,10 @@ impl MoveList
                 self.add_move(
                     CASTLING_KING_FROM_INDEX[us],
                     CASTLING_QUEENSIDE_KING_TO_INDEX[us],
-                    position::piece::KING,
-                    position::piece::NO_PIECE,
-                    position::piece::NO_PIECE,
+                    KING,
+                    NO_PIECE,
+                    NO_PIECE,
                     new_en_passant_castling & !(CASTLING_KING_FROM[us] | CASTLING_QUEENSIDE_ROOK_FROM[us]),
-                    0,
                     true,
                     false,
                     &orig_position
@@ -282,11 +290,10 @@ impl MoveList
                 self.add_move(
                     CASTLING_KING_FROM_INDEX[us],
                     CASTLING_KINGSIDE_KING_TO_INDEX[us],
-                    position::piece::KING,
-                    position::piece::NO_PIECE,
-                    position::piece::NO_PIECE,
+                    KING,
+                    NO_PIECE,
+                    NO_PIECE,
                     new_en_passant_castling & !(CASTLING_KING_FROM[us] | CASTLING_KINGSIDE_ROOK_FROM[us]),
-                    0,
                     true,
                     false,
                     &orig_position
@@ -297,8 +304,8 @@ impl MoveList
     }
     pub fn generate_piece_moves<F>(
         &mut self,
-        orig_position: &position::Position,
-        piece: position::piece::Piece,
+        orig_position: &Position,
+        piece: Piece,
         get_attack_mask: F,
         new_en_passant_castling: u64,
         only_captures: bool
@@ -314,7 +321,7 @@ impl MoveList
             {
                 let from = find_and_clear_trailing_one(&mut piece_occupancy);
 
-                let occupancy = orig_position.players[position::player::WHITE] | orig_position.players[position::player::BLACK];
+                let occupancy = orig_position.players[WHITE] | orig_position.players[BLACK];
                 let mut quiet_attack_mask = get_attack_mask(from, occupancy);
                 let mut capture_attack_mask = quiet_attack_mask & orig_position.players[enemy];
                 quiet_attack_mask &= !capture_attack_mask;
@@ -325,7 +332,7 @@ impl MoveList
                     {
                         let to = find_and_clear_trailing_one(&mut quiet_attack_mask);
                         let n_new_en_passant_castling = new_en_passant_castling & !BIT_AT_INDEX[from];
-                        self.add_move(from, to, piece, position::piece::NO_PIECE, position::piece::NO_PIECE, n_new_en_passant_castling, 0, false, false, &orig_position);
+                        self.add_move(from, to, piece, NO_PIECE, NO_PIECE, n_new_en_passant_castling, false, false, &orig_position);
 
                         if quiet_attack_mask == 0
                         {
@@ -338,12 +345,12 @@ impl MoveList
                     loop
                     {
                         let to = find_and_clear_trailing_one(&mut capture_attack_mask);
-                        for i in 0..position::piece::NO_PIECE
+                        for i in 0..NO_PIECE
                         {
                             if (orig_position.pieces[i] & BIT_AT_INDEX[to]) != 0
                             {
                                 let n_new_en_passant_castling = new_en_passant_castling & !(BIT_AT_INDEX[to] | BIT_AT_INDEX[from]);
-                                self.add_move(from, to, piece, i as position::piece::Piece, position::piece::NO_PIECE, n_new_en_passant_castling, 0, false, false, &orig_position);
+                                self.add_move(from, to, piece, i as Piece, NO_PIECE, n_new_en_passant_castling, false, false, &orig_position);
                                 break;
                             }
                         }
@@ -362,7 +369,7 @@ impl MoveList
             }
         }
     }
-    pub fn sort_moves(&mut self, transposition_table: &transposition_table::TranspositionTable, pv_move: &Move)
+    pub fn sort_moves(&mut self, transposition_table: &TranspositionTable, pv_move: &Move)
     {
         for i in 0..self.len
         {
@@ -373,11 +380,11 @@ impl MoveList
             }
             self[i].score = 0;
             /*MVV-LVA*/
-            self[i].score += evaluation::score::SCORE[self[i].promoted];
-            if self[i].captured != position::piece::NO_PIECE
+            self[i].score += SCORE[self[i].promoted];
+            if self[i].captured != NO_PIECE
             {
-                self[i].score += evaluation::score::SCORE[self[i].captured];
-                self[i].score -= evaluation::score::SCORE[self[i].moved]/8;
+                self[i].score += SCORE[self[i].captured];
+                self[i].score -= SCORE[self[i].moved]/8;
             }
             /*Transposition-Table, fail-high first*/
             if transposition_table.failed_high(self[i].zobrist_key)
@@ -385,7 +392,7 @@ impl MoveList
                 self[i].score = 1000;
             }
         }
-        &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
+        &self.a[0..self.len].sort_unstable_by(|a, b| b.cmp(&a));
     }
     pub fn sort_moves_quiesce(&mut self)
     {
@@ -393,28 +400,13 @@ impl MoveList
         {
             self[i].score = 0;
             /*MVV-LVA*/
-            self[i].score += evaluation::score::SCORE[self[i].promoted];
-            if self[i].captured != position::piece::NO_PIECE
+            self[i].score += SCORE[self[i].promoted];
+            if self[i].captured != NO_PIECE
             {
-                self[i].score += evaluation::score::SCORE[self[i].captured];
-                self[i].score -= evaluation::score::SCORE[self[i].moved]/8;
+                self[i].score += SCORE[self[i].captured];
+                self[i].score -= SCORE[self[i].moved]/8;
             }
         }
         &self.a[0..self.len].sort_unstable_by(|a ,b| b.cmp(&a));
-    }
-    pub fn get_number_legal_moves(&self, orig_position: &position::Position) -> usize
-    {
-        let mut number_legal_moves = 0;
-        for i in 0..self.len
-        {
-            let mut n_position = orig_position.clone();
-            n_position.make_move(&self[i]);
-            if n_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy)
-            {
-                continue;
-            }
-            number_legal_moves += 1;
-        }
-        number_legal_moves
     }
 }
