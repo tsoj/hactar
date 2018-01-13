@@ -8,10 +8,12 @@ use position::piece::NO_PIECE;
 use evaluation::score::{Score, SCORE_MATE, SCORE_INFINITY};//, VALUE_PAWN};
 use search::transposition_table::TranspositionTable;
 use search::node::{Node, NORMAL_NODE, ROOT_NODE};
+use Options;
 
 use std::time::SystemTime;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::mem;
 
 pub type Depth = usize;
 pub const MAX_DEPTH: Depth = 64;
@@ -88,7 +90,7 @@ impl Searcher
 
             let mut candidate_pv = Vec::new();
             if
-                i >= 4 &&
+                i >= 3 &&
                 !in_check &&
                 move_list[i].captured == NO_PIECE &&
                 depth >= 2 &&
@@ -197,11 +199,11 @@ impl Searcher
         }
         alpha
     }
-    pub fn go(orig_position: Position, depth: Depth, should_stop: Arc<AtomicBool>, time_per_move_ms: i64) -> Move
+    pub fn go(orig_position: Position, depth: Depth, options: Options, should_stop: Arc<AtomicBool>, time_per_move_ms: i64) -> Move
     {
         let mut searcher = Searcher
         {
-            transposition_table: TranspositionTable::empty_transposition_table(100_000_000),
+            transposition_table: TranspositionTable::empty_transposition_table((options.transposition_table_size_mb*1024*1024)/mem::size_of::<transposition_table::TranspositionTableEntry>()),
             nodes_count: 0,
             pv: Vec::new(),
             best_move: Move::empty_move(),

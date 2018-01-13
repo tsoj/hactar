@@ -13,7 +13,7 @@ __hactar__ is a simple chessengine written in rust.
 ### uci
 - [x] basic uci framwork
 - [x] mutlithreading for all time input
-- [ ] setoptions
+- [x] setoptions
 
 ### alpha-beta
 - [x] move sorting
@@ -24,6 +24,11 @@ __hactar__ is a simple chessengine written in rust.
 - [x] some kind of nullmove pruning
 - [ ] performance improvements
 - [ ] further pruning and extensions
+- [ ] threefold repetition, 50 move rule
+
+##install
+#### get Cargo here: https://crates.io/
+$cargo build --release
 
 ## license
 Copyright 2018 Tsoj Tsoj

@@ -23,10 +23,19 @@ const CHESS_ENGINE_NAME: &'static str = "hactar";
 const CHESS_ENGINE_AUTHOR: &'static str = "Tsoj Tsoj";
 pub const STARTPOS_FEN: &'static str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+#[derive(Clone, Copy)]
+pub struct Options
+{
+    pub transposition_table_size_mb: usize
+}
+
 fn uci()
 {
     println!("id name {}", CHESS_ENGINE_NAME);
     println!("id author {}", CHESS_ENGINE_AUTHOR);
+    println!("");
+    println!("option name Hash type spin default 128 min 1 max 1048576");
+    println!("");
     println!("uciok");
 }
 fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace)
@@ -139,7 +148,7 @@ fn get_move(m: &String, position: &Position) -> Move
     new_move.zobrist_key = position.get_updated_zobristkey(&new_move);
     new_move
 }
-fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut Arc<AtomicBool>)
+fn go(position: &Position, params: std::str::SplitWhitespace, options: &Options, should_stop: &mut Arc<AtomicBool>)
 {
     #![allow(unused_variables)]
     #![allow(unused_assignments)]
@@ -242,7 +251,8 @@ fn go(position: &Position, params: std::str::SplitWhitespace, should_stop: &mut 
 
     let temp_position = position.clone();
     let temp_should_stop = Arc::clone(&should_stop);
-    let child = thread::Builder::new().name("search".to_string()).spawn(move || { Searcher::go(temp_position, depth, temp_should_stop, time_per_move) });
+    let temp_options =  options.clone();
+    let child = thread::Builder::new().name("search".to_string()).spawn(move || { Searcher::go(temp_position, depth, temp_options, temp_should_stop, time_per_move) });
 }
 fn stop_in(miliseconds: i64, should_stop: Arc<AtomicBool>)
 {
@@ -277,6 +287,53 @@ fn print_debug(position: &Position)
 {
     println!("{}",position.get_data_string());
 }
+fn set_option(options: &mut Options, mut params: std::str::SplitWhitespace)
+{
+    match params.next()
+    {
+        Some(x) =>
+        {
+            if x != "name"
+            {
+                println!("Unknown parameter: {}", x);
+                return;
+            }
+        },
+        None => return
+    }
+    match params.next()
+    {
+        Some("Hash") =>
+        {
+            match params.next()
+            {
+                Some("value") =>
+                {
+                    match params.next()
+                    {
+                        Some(x) =>
+                        {
+                            options.transposition_table_size_mb = x.parse::<usize>().unwrap();
+                        },
+                        None => return
+                    }
+                },
+                Some(x) =>
+                {
+                    println!("Unknown parameter: {}", x);
+                    return;
+                },
+                None => return
+            }
+        },
+        Some(x) =>
+        {
+            println!("Unknown parameter: {}", x);
+            return;
+        },
+        None => return
+    }
+}
 
 fn main()
 {
@@ -285,6 +342,7 @@ fn main()
     let stdin = io::stdin();
     let mut position = Position::empty_position();
     let mut should_stop = Arc::new(AtomicBool::new(false));
+    let mut options = Options{transposition_table_size_mb: 128};
     position.set_from_fen(&STARTPOS_FEN.to_string());
     for line in stdin.lock().lines()
     {
@@ -301,11 +359,13 @@ fn main()
             "uci" => uci(),
             "isready" => println!("readyok"),
             "position" => set_position(&mut position, params),
-            "go" => go(&position, params, &mut should_stop),
+            "go" => go(&position, params, &options, &mut should_stop),
             "stop" => stop(&mut should_stop),
             "quit" => { stop(&mut should_stop); return },
             "print" => print(&position),
             "printdebug" => print_debug(&position),
+            "setoption" => set_option(&mut options, params),
+            "ucinewgame" => {},
             _x => println!("Unknown command: {}", command)
         }
     }
