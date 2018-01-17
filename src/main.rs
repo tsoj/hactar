@@ -283,6 +283,10 @@ fn print(position: &Position)
 {
     println!("{}",position.get_chess_board_string());
 }
+fn print_fen(position: &Position)
+{
+    println!("{}",position.get_fen_string());
+}
 fn print_debug(position: &Position)
 {
     println!("{}",position.get_data_string());
@@ -363,6 +367,7 @@ fn main()
             "stop" => stop(&mut should_stop),
             "quit" => { stop(&mut should_stop); return },
             "print" => print(&position),
+            "printfen" => print_fen(&position),
             "printdebug" => print_debug(&position),
             "setoption" => set_option(&mut options, params),
             "ucinewgame" => {},
