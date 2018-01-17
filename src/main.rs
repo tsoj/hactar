@@ -38,7 +38,7 @@ fn uci()
     println!("");
     println!("uciok");
 }
-fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace)
+fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace,history: &mut Vec<Position>)
 {
     let parameter = params.next().unwrap();
     match parameter
@@ -66,6 +66,8 @@ fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace)
         },
         _x => println!("Unknown parameter: {}", parameter)
     }
+    history.clear();
+    history.push(position.clone());
     let parameter;
     match params.next()
     {
@@ -80,6 +82,7 @@ fn set_position(position: &mut Position, mut params: std::str::SplitWhitespace)
             {
                 let new_move = &get_move(&m.to_string(), &position);
                 position.make_move(&new_move);
+                history.push(position.clone());
             }
         },
         _x => println!("Unknown parameter: {}", parameter)
@@ -148,7 +151,7 @@ fn get_move(m: &String, position: &Position) -> Move
     new_move.zobrist_key = position.get_updated_zobristkey(&new_move);
     new_move
 }
-fn go(position: &Position, params: std::str::SplitWhitespace, options: &Options, should_stop: &mut Arc<AtomicBool>)
+fn go(position: &Position, params: std::str::SplitWhitespace, options: &Options, should_stop: &mut Arc<AtomicBool>, history: &Vec<Position>)
 {
     #![allow(unused_variables)]
     #![allow(unused_assignments)]
@@ -252,7 +255,8 @@ fn go(position: &Position, params: std::str::SplitWhitespace, options: &Options,
     let temp_position = position.clone();
     let temp_should_stop = Arc::clone(&should_stop);
     let temp_options =  options.clone();
-    let child = thread::Builder::new().name("search".to_string()).spawn(move || { Searcher::go(temp_position, depth, temp_options, temp_should_stop, time_per_move) });
+    let temp_history = history.clone();
+    let child = thread::Builder::new().name("search".to_string()).spawn(move || { Searcher::go(temp_position, depth, temp_options, temp_should_stop, time_per_move, temp_history) });
 }
 fn stop_in(miliseconds: i64, should_stop: Arc<AtomicBool>)
 {
@@ -341,6 +345,7 @@ fn main()
 
     let stdin = io::stdin();
     let mut position = Position::empty_position();
+    let mut history: Vec<Position> = Vec::new();
     let mut should_stop = Arc::new(AtomicBool::new(false));
     let mut options = Options{transposition_table_size_mb: 128};
     position.set_from_fen(&STARTPOS_FEN.to_string());
@@ -358,8 +363,8 @@ fn main()
         {
             "uci" => uci(),
             "isready" => println!("readyok"),
-            "position" => set_position(&mut position, params),
-            "go" => go(&position, params, &options, &mut should_stop),
+            "position" => set_position(&mut position, params, &mut history),
+            "go" => go(&position, params, &options, &mut should_stop, &history),
             "stop" => stop(&mut should_stop),
             "quit" => { stop(&mut should_stop); return },
             "print" => print(&position),

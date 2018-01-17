@@ -26,10 +26,33 @@ pub struct Searcher
     pub transposition_table: TranspositionTable,
     pub nodes_count: u64,
     pub pv: PV,
-    pub should_stop: Arc<AtomicBool>
+    pub should_stop: Arc<AtomicBool>,
+    pub history: Vec<Position>
 }
 impl Searcher
 {
+    fn history(&self, position: &Position) -> usize
+    {
+        let mut counter = 0;
+        for i in 0..self.history.len()
+        {
+            if
+                self.history[i].pieces[0] == position.pieces[0] &&
+                self.history[i].pieces[1] == position.pieces[1] &&
+                self.history[i].pieces[2] == position.pieces[2] &&
+                self.history[i].pieces[3] == position.pieces[3] &&
+                self.history[i].pieces[4] == position.pieces[4] &&
+                self.history[i].pieces[5] == position.pieces[5] &&
+                self.history[i].players[0] == position.players[0] &&
+                self.history[i].players[1] == position.players[1] &&
+                self.history[i].en_passant_castling == position.en_passant_castling
+            {
+                counter += 1;
+            }
+        }
+        counter
+    }
+
     fn nega_max(
         &mut self,
         node_type: Node,
@@ -98,6 +121,10 @@ impl Searcher
                 continue;
             }
             current_score = -self.nega_max(NORMAL_NODE, &new_position, depth - 1, -beta, -alpha, &mut candidate_pv);
+            if node_type==ROOT_NODE && self.history(&new_position) >= 2
+            {
+                current_score = 0;
+            }
             if current_score > alpha
             {
                 alpha = current_score;
@@ -194,15 +221,17 @@ impl Searcher
         }
         alpha
     }
-    pub fn go(orig_position: Position, depth: Depth, options: Options, should_stop: Arc<AtomicBool>, time_per_move_ms: i64) -> Move
+    pub fn go(orig_position: Position, depth: Depth, options: Options, should_stop: Arc<AtomicBool>, time_per_move_ms: i64, history: Vec<Position>) -> Move
     {
         let mut searcher = Searcher
         {
             transposition_table: TranspositionTable::empty_transposition_table((options.transposition_table_size_mb*1024*1024)/mem::size_of::<transposition_table::TranspositionTableEntry>()),
             nodes_count: 0,
             pv: Vec::new(),
-            should_stop: should_stop
+            should_stop: should_stop,
+            history: history
         };
+        //println!("{}", searcher.history(&orig_position));
         let mut best_move = Move::empty_move();
         for i in 1..(depth+1)
         {
@@ -228,21 +257,21 @@ impl Searcher
                     }
                 }
                 print!("info ");
-                print!("depth {0: <2} ", i);
-                print!("time {0: <8} ", (time*1000.0) as u64);
-                print!("nodes {0: <11} ", searcher.nodes_count);
-                print!("nps {0: <9} ", (searcher.nodes_count as f64 / time) as u64);
+                print!("depth {} ", i);
+                print!("time {} ", (time*1000.0) as u64);
+                print!("nodes {} ", searcher.nodes_count);
+                print!("nps {} ", (searcher.nodes_count as f64 / time) as u64);
                 if score >= SCORE_MATE
                 {
-                    print!("score mate {0: <8} ", (-score + SCORE_MATE + i as Score + 1)/2);
+                    print!("score mate {} ", (-score + SCORE_MATE + i as Score + 1)/2);
                 }
                 else if score <= -SCORE_MATE
                 {
-                    print!("score mate {0: <8} ", -(score + SCORE_MATE + i as Score + 1)/2);
+                    print!("score mate {} ", -(score + SCORE_MATE + i as Score + 1)/2);
                 }
                 else
                 {
-                    print!("score cp {0: <8} ", score);
+                    print!("score cp {} ", score);
                 }
                 print!("pv ");
                 for i in 0..searcher.pv.len()
