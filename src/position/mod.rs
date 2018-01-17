@@ -680,6 +680,14 @@ impl Position
                 self.add_piece(us, m.promoted, BIT_AT_INDEX[m.to]);
             }
         }
+        if m.moved == PAWN || m.captured != NO_PIECE
+        {
+            self.halfmove_clock = 0;
+        }
+        else
+        {
+            self.halfmove_clock += 1;
+        }
         if self.us == BLACK
         {
             self.fullmoves_played += 1;
