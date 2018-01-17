@@ -256,19 +256,58 @@ impl Position
                 }
             }
         }
-        let mut s = format_for_fen(&temp);
+        let mut fen = format_for_fen(&temp);
         if self.us == WHITE
         {
-            s.push_str(" w - - ");
+            fen.push_str(" w ");
         }
         else
         {
-            s.push_str(" b - - ");
+            fen.push_str(" b ");
         }
-        s.push_str(&(self.halfmove_clock).to_string());
-        s.push_str(" ");
-        s.push_str(&(self.fullmoves_played).to_string());
-        s
+        let castling = self.en_passant_castling & (RANKS[0] | RANKS[7]);
+        if castling != 0
+        {
+            if castling & CASTLING_KING_FROM[WHITE] != 0 &&
+               castling & CASTLING_KINGSIDE_ROOK_FROM[WHITE] != 0
+            {
+                fen.push_str("K");
+            }
+            if castling & CASTLING_KING_FROM[WHITE] != 0 &&
+               castling & CASTLING_QUEENSIDE_ROOK_FROM[WHITE] != 0
+            {
+                fen.push_str("Q");
+            }
+            if castling & CASTLING_KING_FROM[BLACK] != 0 &&
+               castling & CASTLING_KINGSIDE_ROOK_FROM[BLACK] != 0
+            {
+                fen.push_str("k");
+            }
+            if castling & CASTLING_KING_FROM[BLACK] != 0 &&
+               castling & CASTLING_QUEENSIDE_ROOK_FROM[BLACK] != 0
+            {
+                fen.push_str("q");
+            }
+            fen.push_str(" ");
+        }
+        else
+        {
+            fen.push_str("- ");
+        }
+        let en_passant = self.en_passant_castling & !castling;
+        if en_passant != 0
+        {
+            fen.push_str(get_field_notation(find_and_clear_trailing_one(&mut en_passant.clone())));
+        }
+        else
+        {
+            fen.push_str("-");
+        }
+        fen.push_str(" ");
+        fen.push_str(&(self.halfmove_clock).to_string());
+        fen.push_str(" ");
+        fen.push_str(&(self.fullmoves_played).to_string());
+        fen
     }
     pub fn get_data_string(&self) -> String
     {
