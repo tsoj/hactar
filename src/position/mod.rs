@@ -39,6 +39,30 @@ fn format_for_chess_board(field_content: &Vec<String>)->String
     s.push_str("  A   B   C   D   E   F   G   H\n");
     s
 }
+fn format_for_fen(field_content: &Vec<String>)->String
+{
+    let mut s = "".to_string();
+    for h in 0..8
+    {
+        let i = 7 - h;
+        for j in 0..8
+        {
+            s.push_str(&field_content[8*i + j]);
+        }
+        if i > 0
+        {
+            s.push_str("/");
+        }
+    }
+    s = str::replace(&s, "11111111", "8");
+    s = str::replace(&s, "1111111", "7");
+    s = str::replace(&s, "111111", "6");
+    s = str::replace(&s, "11111", "5");
+    s = str::replace(&s, "1111", "4");
+    s = str::replace(&s, "111", "3");
+    s = str::replace(&s, "11", "2");
+    s
+}
 pub fn get_bitboard_string(bitboard: u64) -> String
 {
   let mut temp: Vec<String> = vec![String::new(); 64];
@@ -170,6 +194,120 @@ impl Position
             s.push_str("Black to move.");
         }
         s
+    }
+    pub fn get_fen_string(&self) -> String
+    {
+        let mut temp: Vec<String> = vec![String::new(); 64];
+        for  i in 0..BIT_AT_INDEX.len()
+        {
+            temp[i] = "1".to_string();
+            if (self.players[BLACK] & BIT_AT_INDEX[i]) != 0
+            {
+                if (self.pieces[PAWN] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "p".to_string();
+                }
+                else if (self.pieces[KNIGHT] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "n".to_string();
+                }
+                else if (self.pieces[BISHOP] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "b".to_string();
+                }
+                else if (self.pieces[ROOK] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "r".to_string();
+                }
+                else if (self.pieces[QUEEN] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "q".to_string();
+                }
+                else if (self.pieces[KING] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "k".to_string();
+                }
+            }
+            else if (self.players[WHITE] & BIT_AT_INDEX[i]) != 0
+            {
+                if (self.pieces[PAWN] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "P".to_string();
+                }
+                else if (self.pieces[KNIGHT] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "N".to_string();
+                }
+                else if (self.pieces[BISHOP] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "B".to_string();
+                }
+                else if (self.pieces[ROOK] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "R".to_string();
+                }
+                else if (self.pieces[QUEEN] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "Q".to_string();
+                }
+                else if (self.pieces[KING] & BIT_AT_INDEX[i]) != 0
+                {
+                    temp[i] = "K".to_string();
+                }
+            }
+        }
+        let mut fen = format_for_fen(&temp);
+        if self.us == WHITE
+        {
+            fen.push_str(" w ");
+        }
+        else
+        {
+            fen.push_str(" b ");
+        }
+        let castling = self.en_passant_castling & (RANKS[0] | RANKS[7]);
+        if castling != 0
+        {
+            if castling & CASTLING_KING_FROM[WHITE] != 0 &&
+               castling & CASTLING_KINGSIDE_ROOK_FROM[WHITE] != 0
+            {
+                fen.push_str("K");
+            }
+            if castling & CASTLING_KING_FROM[WHITE] != 0 &&
+               castling & CASTLING_QUEENSIDE_ROOK_FROM[WHITE] != 0
+            {
+                fen.push_str("Q");
+            }
+            if castling & CASTLING_KING_FROM[BLACK] != 0 &&
+               castling & CASTLING_KINGSIDE_ROOK_FROM[BLACK] != 0
+            {
+                fen.push_str("k");
+            }
+            if castling & CASTLING_KING_FROM[BLACK] != 0 &&
+               castling & CASTLING_QUEENSIDE_ROOK_FROM[BLACK] != 0
+            {
+                fen.push_str("q");
+            }
+            fen.push_str(" ");
+        }
+        else
+        {
+            fen.push_str("- ");
+        }
+        let en_passant = self.en_passant_castling & !castling;
+        if en_passant != 0
+        {
+            fen.push_str(get_field_notation(find_and_clear_trailing_one(&mut en_passant.clone())));
+        }
+        else
+        {
+            fen.push_str("-");
+        }
+        fen.push_str(" ");
+        fen.push_str(&(self.halfmove_clock).to_string());
+        fen.push_str(" ");
+        fen.push_str(&(self.fullmoves_played).to_string());
+        fen
     }
     pub fn get_data_string(&self) -> String
     {
@@ -542,6 +680,14 @@ impl Position
                 self.add_piece(us, m.promoted, BIT_AT_INDEX[m.to]);
             }
         }
+        if m.moved == PAWN || m.captured != NO_PIECE
+        {
+            self.halfmove_clock = 0;
+        }
+        else
+        {
+            self.halfmove_clock += 1;
+        }
         if self.us == BLACK
         {
             self.fullmoves_played += 1;
@@ -561,6 +707,8 @@ impl Position
             next_p.make_move(&ml[i]);
             ret += "------------------------------------------------\n";
             ret += &next_p.get_chess_board_string()[..];
+            ret += "\n";
+            ret += &next_p.get_fen_string()[..];
             ret += "\n";
         }
         ret+= &ml.len.to_string()[..];
