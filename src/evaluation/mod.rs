@@ -18,11 +18,11 @@ TODO:
 - important squares
 */
 const BONUS_PASSED_PAWN: Score = 50;
-const BONUS_HAS_NEIGHBOR_PAWN: Score = 10;
-const BONUS_ROOKS_ARE_CONNECTED: Score = 50;
+const PENALTY_HAS_NO_NEIGHBOR_PAWN: Score = 10;
+const BONUS_ROOKS_ARE_CONNECTED: Score = 20;
 const BONUS_KNIGHT_NOT_ON_EDGE: Score = 10;
 const PENALTY_BISHOP_ON_HOMERANK: Score = 10;
-const PENALTY_KING_UNSAFE: Score = 30;
+const PENALTY_KING_UNSAFE: Score = 35;
 
 #[inline(always)]
 fn evaluate_pawn(position: &Position, index: usize, us: Player, enemy: Player) -> Score
@@ -31,16 +31,18 @@ fn evaluate_pawn(position: &Position, index: usize, us: Player, enemy: Player) -
     //passed pawn
     if IS_PASSED[us][index] & position.pieces[PAWN] & position.players[enemy] == 0
     {
-        ret += BONUS_PASSED_PAWN;
+        let file = (index/8) as i32;
+        let relative_file = (file - 4 - 4*MOVE_DIRECTION[us])*MOVE_DIRECTION[us];
+        ret += BONUS_PASSED_PAWN+relative_file*20;
     }
     //pawn structure
-    if index%8 != 0 && position.pieces[PAWN] & position.players[us] & FILES_64[index - 1]!= 0
+    if index%8 != 0 && position.pieces[PAWN] & position.players[us] & FILES_64[index - 1]== 0
     {
-        ret += BONUS_HAS_NEIGHBOR_PAWN;
+        ret -= PENALTY_HAS_NO_NEIGHBOR_PAWN;
     }
-    if index%8 != 7 && position.pieces[PAWN] & position.players[us]  & FILES_64[index + 1]!= 0
+    if index%8 != 7 && position.pieces[PAWN] & position.players[us]  & FILES_64[index + 1]== 0
     {
-        ret += BONUS_HAS_NEIGHBOR_PAWN;
+        ret -= PENALTY_HAS_NO_NEIGHBOR_PAWN;
     }
     ret
 }

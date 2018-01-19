@@ -68,6 +68,7 @@ pub const IS_PASSED: [[u64; 64]; 2] = include!("./chess_data_in/is_passed.in");
 pub const HOME_RANK: [u64; 2] = [RANKS[0], RANKS[7]];
 pub const PAWN_HOME_RANK: [u64; 2] = [RANKS[1], RANKS[6]];
 pub const CENTER_7X7: u64 = !0 & !RANKS[0] & !RANKS[7] & !FILES[0] & !FILES[7];
+pub const MOVE_DIRECTION: [i32; 2] = [1, -1];
 
 pub const ZOBRIST_RANDOM_BITMASKS_PIECES: [[u64; 64]; 6] = include!("./chess_data_in/zobrist_random_bitmasks_pieces.in");
 pub const ZOBRIST_RANDOM_BITMASKS_PLAYERS: [[u64; 64]; 2] = include!("./chess_data_in/zobrist_random_bitmasks_players.in");
