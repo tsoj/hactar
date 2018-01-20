@@ -17,12 +17,12 @@ TODO:
 - rooks together, castling
 - important squares
 */
-const BONUS_PASSED_PAWN: Score = 50;
+const BONUS_PASSED_PAWN: Score = 10;
 const PENALTY_HAS_NO_NEIGHBOR_PAWN: Score = 10;
 const BONUS_ROOKS_ARE_CONNECTED: Score = 20;
 const BONUS_KNIGHT_NOT_ON_EDGE: Score = 10;
 const PENALTY_BISHOP_ON_HOMERANK: Score = 10;
-const PENALTY_KING_UNSAFE: Score = 35;
+const PENALTY_KING_UNSAFE: Score = 40;
 
 #[inline(always)]
 fn evaluate_pawn(position: &Position, index: usize, us: Player, enemy: Player) -> Score
@@ -143,6 +143,10 @@ impl Position
 
     pub fn evaluate(&self) -> Score
     {
+        if self.halfmove_clock >= 100
+        {
+            return 0;
+        }
         let mut ret = 0;
         ret += self.evaluate_all(PAWN, evaluate_pawn);
         ret += self.evaluate_all(KNIGHT, evaluate_knight);

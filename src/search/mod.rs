@@ -112,7 +112,7 @@ impl Searcher
 
             let mut candidate_pv = Vec::new();
             if
-                i >= 3 &&
+                i > 4 &&
                 !in_check &&
                 move_list[i].captured == NO_PIECE &&
                 depth >= 2 &&
@@ -286,7 +286,7 @@ impl Searcher
                 if time_per_move_ms != -1
                 {
                     let time_last_iteration = (time*1000.0)as i64;
-                    let estimated_time_next_iteration = (time_last_iteration - 400)*10;
+                    let estimated_time_next_iteration = (time_last_iteration - 500)*10;
                     if estimated_time_next_iteration > time_per_move_ms && i >= 6
                     {
                         break;
