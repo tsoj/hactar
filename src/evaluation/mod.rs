@@ -32,7 +32,7 @@ fn evaluate_pawn(position: &Position, index: usize, us: Player, enemy: Player) -
     if IS_PASSED[us][index] & position.pieces[PAWN] & position.players[enemy] == 0
     {
         let file = (index/8) as i32;
-        let relative_file = (file - 4 - 4*MOVE_DIRECTION[us])*MOVE_DIRECTION[us];
+        let relative_file = (file - 4 + 4*MOVE_DIRECTION[us])*MOVE_DIRECTION[us];
         ret += BONUS_PASSED_PAWN+relative_file*20;
     }
     //pawn structure
