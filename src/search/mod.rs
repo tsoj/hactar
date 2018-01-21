@@ -36,7 +36,7 @@ impl Searcher
         let mut counter = 0;
         for i in 0..self.history.len()
         {
-            if
+            if  i%2 == self.history.len()%2 &&
                 self.history[i].pieces[0] == position.pieces[0] &&
                 self.history[i].pieces[1] == position.pieces[1] &&
                 self.history[i].pieces[2] == position.pieces[2] &&
