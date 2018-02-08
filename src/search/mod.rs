@@ -27,7 +27,8 @@ pub struct Searcher
     pub nodes_count: u64,
     pub pv: PV,
     pub should_stop: Arc<AtomicBool>,
-    pub history: Vec<Position>
+    pub history: Vec<Position>,
+    pub in_null_move: bool
 }
 impl Searcher
 {
@@ -111,6 +112,7 @@ impl Searcher
             number_legal_moves += 1;
 
             let mut candidate_pv = Vec::new();
+            //Late Move Reduction
             if
                 i > 4 &&
                 !in_check &&
@@ -120,7 +122,30 @@ impl Searcher
             {
                 continue;
             }
+
+            //Nullmove Pruning
+            /*let temp = new_position.us;
+            new_position.us = new_position.enemy;
+            new_position.enemy = temp;
+            if
+                !in_check &&
+                depth >= 2 &&
+                !self.in_null_move
+            {
+                self.in_null_move = true;
+                current_score = self.nega_max(NORMAL_NODE, &new_position, depth - depth/5 - 2 , alpha, beta, &mut candidate_pv);
+                self.in_null_move = false;
+                if current_score <= alpha
+                {
+                    continue;
+                }
+            }
+            let temp = new_position.us;
+            new_position.us = new_position.enemy;
+            new_position.enemy = temp;*/
+
             current_score = -self.nega_max(NORMAL_NODE, &new_position, depth - 1, -beta, -alpha, &mut candidate_pv);
+            //threefold repition
             if node_type==ROOT_NODE && self.history(&new_position) >= 2
             {
                 current_score = 0;
@@ -225,11 +250,13 @@ impl Searcher
     {
         let mut searcher = Searcher
         {
-            transposition_table: TranspositionTable::empty_transposition_table((options.transposition_table_size_mb*1024*1024)/mem::size_of::<transposition_table::TranspositionTableEntry>()),
+            transposition_table:
+                TranspositionTable::empty_transposition_table((options.transposition_table_size_mb*1024*1024)/mem::size_of::<transposition_table::TranspositionTableEntry>()),
             nodes_count: 0,
             pv: Vec::new(),
             should_stop: should_stop,
-            history: history
+            history: history,
+            in_null_move: false
         };
         //println!("{}", searcher.history(&orig_position));
         let mut best_move = Move::empty_move();

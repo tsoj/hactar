@@ -105,7 +105,7 @@ impl Move
     }
 }
 
-const MOVE_LIST_MAXIMUM_LENGTH: usize = 100;//TODO: needs some testing
+const MOVE_LIST_MAXIMUM_LENGTH: usize = 128;//TODO: needs some testing
 #[derive(Copy, Clone)]
 pub struct MoveList
 {
