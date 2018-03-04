@@ -24,7 +24,7 @@ __hactar__ is a simple chessengine written in rust.
 - [x] some kind of nullmove pruning
 - [ ] performance improvements
 - [ ] further pruning and extensions
-- [ ] threefold repetition, 50 move rule
+- [x] threefold repetition, 50 move rule
 
 ## install
 ##### get Cargo here: https://crates.io/
