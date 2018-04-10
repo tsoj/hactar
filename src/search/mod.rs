@@ -89,14 +89,6 @@ impl Searcher
 
         let mut current_score: Score;
         let in_check = orig_position.is_check_unkown_kings_index(orig_position.us, orig_position.enemy);
-        if !in_check && node_type != ROOT_NODE && depth <= 3
-        {
-            let current_score = orig_position.evaluate();
-            if current_score >= beta
-            {
-                return current_score;
-            }
-        }
 
         let mut move_list = orig_position.generate_move_list();
         move_list.sort_moves(&self.transposition_table, &pv_move);
@@ -123,28 +115,8 @@ impl Searcher
                 continue;
             }
 
-            //Nullmove Pruning
-            /*let temp = new_position.us;
-            new_position.us = new_position.enemy;
-            new_position.enemy = temp;
-            if
-                !in_check &&
-                depth >= 2 &&
-                !self.in_null_move
-            {
-                self.in_null_move = true;
-                current_score = self.nega_max(NORMAL_NODE, &new_position, depth - depth/5 - 2 , alpha, beta, &mut candidate_pv);
-                self.in_null_move = false;
-                if current_score <= alpha
-                {
-                    continue;
-                }
-            }
-            let temp = new_position.us;
-            new_position.us = new_position.enemy;
-            new_position.enemy = temp;*/
-
             current_score = -self.nega_max(NORMAL_NODE, &new_position, depth - 1, -beta, -alpha, &mut candidate_pv);
+
             //threefold repition
             if node_type==ROOT_NODE && self.history(&new_position) >= 2
             {
