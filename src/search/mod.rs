@@ -118,7 +118,7 @@ impl Searcher
             current_score = -self.nega_max(NORMAL_NODE, &new_position, depth - 1, -beta, -alpha, &mut candidate_pv);
 
             //threefold repition
-            if node_type==ROOT_NODE && self.history(&new_position) >= 2
+            if node_type==ROOT_NODE && self.history(&new_position) >= 1
             {
                 current_score = 0;
             }
@@ -230,7 +230,7 @@ impl Searcher
             history: history,
             in_null_move: false
         };
-        //println!("{}", searcher.history(&orig_position));
+
         let mut best_move = Move::empty_move();
         for i in 1..(depth+1)
         {
