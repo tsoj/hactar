@@ -65,6 +65,9 @@ fn evaluate_bishop(position: &Position, index: usize, us: Player, enemy: Player)
     {
         ret -= PENALTY_BISHOP_ON_HOMERANK;
     }
+    //moveability
+    let attack_mask = get_attack_mask_bishop(index, position.players[WHITE] | position.players[BLACK]);
+    ret += attack_mask.count_ones() as Score;
     ret
 }
 #[inline(always)]
@@ -77,12 +80,17 @@ fn evaluate_rook(position: &Position, index: usize, us: Player, enemy: Player) -
     {
         ret += BONUS_ROOKS_ARE_CONNECTED;
     }
+    //moveability
+    ret += attack_mask.count_ones() as Score;
     ret
 }
 #[inline(always)]
 fn evaluate_queen(position: &Position, index: usize, us: Player, enemy: Player) -> Score
 {
     let mut ret = 0;
+    //moveability
+    let attack_mask = get_attack_mask_queen(index, position.players[WHITE] | position.players[BLACK]);
+    ret += attack_mask.count_ones() as Score;
     ret
 }
 #[inline(always)]

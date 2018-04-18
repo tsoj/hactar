@@ -104,13 +104,17 @@ impl Searcher
             number_legal_moves += 1;
 
             let mut candidate_pv = Vec::new();
+
             //Late Move Reduction
             if
                 i > 4 &&
                 !in_check &&
                 move_list[i].captured == NO_PIECE &&
-                depth >= 2 &&
-                -self.nega_max(NORMAL_NODE, &new_position, depth - 2, -beta, -alpha, &mut candidate_pv) <= alpha
+                -self.nega_max(
+                    NORMAL_NODE, &new_position,
+                    if depth as isize - 2 >= 0 {depth - 2} else {0},
+                    -beta, -alpha, &mut candidate_pv
+                ) <= alpha
             {
                 continue;
             }
@@ -285,7 +289,7 @@ impl Searcher
                 if time_per_move_ms != -1
                 {
                     let time_last_iteration = (time*1000.0)as i64;
-                    let estimated_time_next_iteration = (time_last_iteration - 500)*10;
+                    let estimated_time_next_iteration = (time_last_iteration - 1000)*10;
                     if estimated_time_next_iteration > time_per_move_ms && i >= 6
                     {
                         break;
